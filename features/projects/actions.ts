@@ -388,33 +388,22 @@ async function getOrderedProjectPhases(supabase: any, projectId: string) {
   return data as Array<{ id: string; phase_key: string; position: number; status: "not_started" | "active" | "complete" }>;
 }
 
-async function updatePhaseStatuses(
-  supabase: any,
-  projectId: string,
-  phases: Array<{ id: string; phase_key: string; position: number }>,
-  activeIndex: number
-) {
-  const updateResults = await Promise.all(
-    phases.map((phase, index) =>
-      supabase
-        .from("project_phases")
-        .update({
-          status: index < activeIndex ? "complete" : index === activeIndex ? "active" : "not_started"
-        })
-        .eq("id", phase.id)
-        .eq("project_id", projectId)
-    )
-  );
+async function updateProjectCurrentPhase(supabase: any, projectId: string) {
+  const { data: activePhases, error: phasesError } = await supabase
+    .from("project_phases")
+    .select("phase_key")
+    .eq("project_id", projectId)
+    .eq("status", "active")
+    .order("position", { ascending: true })
+    .limit(1);
 
-  const firstError = updateResults.find((result) => result.error)?.error;
-
-  if (firstError) {
-    throw firstError;
+  if (phasesError) {
+    throw phasesError;
   }
 
   const { error } = await supabase
     .from("projects")
-    .update({ current_phase_key: phases[activeIndex]?.phase_key ?? null })
+    .update({ current_phase_key: activePhases?.[0]?.phase_key ?? null })
     .eq("id", projectId);
 
   if (error) {
@@ -446,7 +435,17 @@ export async function startProjectPhase(formData: FormData) {
       throw new Error("Timeline phase not found.");
     }
 
-    await updatePhaseStatuses(supabase, parsed.data.projectId, phases, activeIndex);
+    const { error } = await supabase
+      .from("project_phases")
+      .update({ status: "active" })
+      .eq("id", parsed.data.phaseId)
+      .eq("project_id", parsed.data.projectId);
+
+    if (error) {
+      throw error;
+    }
+
+    await updateProjectCurrentPhase(supabase, parsed.data.projectId);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update the timeline.";
     redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(message)}`);
@@ -481,20 +480,39 @@ export async function completeProjectPhase(formData: FormData) {
       throw new Error("Timeline phase not found.");
     }
 
-    const nextIndex = Math.min(phaseIndex + 1, phases.length - 1);
-    await updatePhaseStatuses(supabase, parsed.data.projectId, phases, nextIndex);
+    if (phases[phaseIndex].status !== "active") {
+      throw new Error("Only active timeline phases can be completed.");
+    }
 
-    if (nextIndex === phaseIndex) {
-      const { error } = await supabase
-        .from("project_phases")
-        .update({ status: "complete" })
-        .eq("id", parsed.data.phaseId)
-        .eq("project_id", parsed.data.projectId);
+    const { error } = await supabase
+      .from("project_phases")
+      .update({ status: "complete" })
+      .eq("id", parsed.data.phaseId)
+      .eq("project_id", parsed.data.projectId);
 
-      if (error) {
-        throw error;
+    if (error) {
+      throw error;
+    }
+
+    const otherActivePhases = phases.filter((phase) => phase.id !== parsed.data.phaseId && phase.status === "active");
+
+    if (!otherActivePhases.length) {
+      const nextPhase = phases.slice(phaseIndex + 1).find((phase) => phase.status === "not_started");
+
+      if (nextPhase) {
+        const { error: nextError } = await supabase
+          .from("project_phases")
+          .update({ status: "active" })
+          .eq("id", nextPhase.id)
+          .eq("project_id", parsed.data.projectId);
+
+        if (nextError) {
+          throw nextError;
+        }
       }
     }
+
+    await updateProjectCurrentPhase(supabase, parsed.data.projectId);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update the timeline.";
     redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(message)}`);

@@ -72,7 +72,7 @@ Supabase is the persistence and auth layer. The schema starts with RLS enabled a
 - Draft project creation, deal status, payment confirmation, and activation controls.
 - Main project state controls for draft, active, paused, and archived projects, including archive reasons.
 - Template default macro phases now populate new draft project timelines.
-- Admins can manually set the active macro phase or complete the current phase from the project detail page.
+- Admins can manually set macro phases active or complete from the project detail page; multiple phases may stay active when work overlaps.
 - Deliverable creation, client approval, atomic client revision request, admin resubmission, and admin approval-on-behalf actions.
 - Minimal neutral UI primitives and layout components.
 

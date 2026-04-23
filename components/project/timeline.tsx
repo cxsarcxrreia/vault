@@ -13,14 +13,13 @@ type MacroTimelineProps = {
 
 export function MacroTimeline({ phases, projectId, mode = "readonly" }: MacroTimelineProps) {
   const canManage = mode === "admin" && Boolean(projectId);
+  const sortedPhases = phases.slice().sort((a, b) => a.position - b.position);
 
   return (
     <Card>
       <CardContent>
         <ol className="grid gap-3 md:grid-cols-3">
-          {phases
-            .slice()
-            .sort((a, b) => a.position - b.position)
+          {sortedPhases
             .map((phase) => (
               <li key={phase.id} className="rounded-md border p-4">
                 <div className="space-y-4">
@@ -33,20 +32,29 @@ export function MacroTimeline({ phases, projectId, mode = "readonly" }: MacroTim
                   </div>
                   {canManage ? (
                     <div className="flex flex-wrap gap-2 border-t pt-3">
-                      {phase.status === "active" ? (
+                      {phase.status !== "complete" ? (
                         <form action={completeProjectPhase}>
                           <input type="hidden" name="projectId" value={projectId} />
                           <input type="hidden" name="phaseId" value={phase.id} />
-                          <Button variant="success" className="h-8 px-3 text-xs">
+                          <Button variant="success" className="h-8 px-3 text-xs" disabled={phase.status !== "active"}>
                             Complete
                           </Button>
                         </form>
-                      ) : (
+                      ) : null}
+                      {phase.status !== "active" ? (
                         <form action={startProjectPhase}>
                           <input type="hidden" name="projectId" value={projectId} />
                           <input type="hidden" name="phaseId" value={phase.id} />
                           <Button variant="outline" className="h-8 px-3 text-xs">
-                            Set active
+                            {phase.status === "complete" ? "Reopen" : "Set active"}
+                          </Button>
+                        </form>
+                      ) : (
+                        <form action={completeProjectPhase}>
+                          <input type="hidden" name="projectId" value={projectId} />
+                          <input type="hidden" name="phaseId" value={phase.id} />
+                          <Button variant="ghost" className="h-8 px-3 text-xs text-muted-foreground" disabled>
+                            Active
                           </Button>
                         </form>
                       )}

@@ -76,6 +76,14 @@ export function mapProject(
 ): Project {
   const client = firstRelation(row.clients);
   const template = firstRelation(row.project_templates);
+  const phases = extras?.phases ?? [];
+  const activePhases = phases.filter((phase) => phase.status === "active");
+  const allPhasesComplete = phases.length > 0 && phases.every((phase) => phase.status === "complete");
+  const currentPhase = activePhases.length
+    ? activePhases.map((phase) => phase.name).join(", ")
+    : allPhasesComplete
+      ? "Project complete"
+      : row.current_phase_key?.replaceAll("_", " ") ?? "Not started";
 
   return {
     id: row.id,
@@ -87,7 +95,7 @@ export function mapProject(
     archiveReason: row.archive_reason,
     preActivationStatus: row.pre_activation_status,
     activationState: row.activation_state,
-    currentPhase: row.current_phase_key?.replaceAll("_", " ") ?? "Not started",
+    currentPhase,
     templateName: template?.name ?? row.service_type ?? "Custom project",
     startsOn: row.starts_on,
     endsOn: row.ends_on,
