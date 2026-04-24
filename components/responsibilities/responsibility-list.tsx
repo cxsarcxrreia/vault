@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
-import { createResponsibilityItem, deleteResponsibilityItem, updateResponsibilityItem } from "@/features/projects/actions";
+import { createResponsibilityItem } from "@/features/projects/actions";
 import { getResponsibilityOwnerLabel, RESPONSIBILITY_OWNERS } from "@/features/projects/responsibilities";
+import { EditableResponsibilityRow } from "@/components/responsibilities/editable-responsibility-row";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,56 +64,7 @@ export function ResponsibilityList({ items, mode = "readonly", projectId, preset
           <div className="space-y-3">
             {items.map((item) =>
               canEdit ? (
-                <div key={item.id} className={`grid gap-3 rounded-lg border bg-background p-3 md:items-end ${editableGridClass}`}>
-                  <form id={`responsibility-${item.id}`} action={updateResponsibilityItem} className="contents">
-                    <input type="hidden" name="projectId" value={projectId} form={`responsibility-${item.id}`} />
-                    <input type="hidden" name="responsibilityId" value={item.id} form={`responsibility-${item.id}`} />
-                  </form>
-                  <label className="space-y-2">
-                    <span className="text-xs font-medium text-muted-foreground md:hidden">Responsibility</span>
-                    <input
-                      name="title"
-                      form={`responsibility-${item.id}`}
-                      defaultValue={item.title}
-                      required
-                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                    />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-xs font-medium text-muted-foreground md:hidden">Owner</span>
-                    <select
-                      name="owner"
-                      form={`responsibility-${item.id}`}
-                      defaultValue={item.owner}
-                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                    >
-                      {RESPONSIBILITY_OWNERS.map((owner) => (
-                        <option key={owner.value} value={owner.value}>
-                          {owner.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-xs font-medium text-muted-foreground md:hidden">Notes</span>
-                    <input
-                      name="notes"
-                      form={`responsibility-${item.id}`}
-                      defaultValue={item.notes ?? ""}
-                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                    />
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
-                    <Button type="submit" variant="outline" form={`responsibility-${item.id}`} className="h-10 px-4">
-                      Save
-                    </Button>
-                    <form action={deleteResponsibilityItem}>
-                      <input type="hidden" name="projectId" value={projectId} />
-                      <input type="hidden" name="responsibilityId" value={item.id} />
-                      <Button type="submit" variant="danger" className="h-10 px-4">Delete</Button>
-                    </form>
-                  </div>
-                </div>
+                <EditableResponsibilityRow key={item.id} item={item} projectId={projectId!} gridClassName={editableGridClass} />
               ) : (
                 <div key={item.id} className={`grid gap-3 rounded-lg border bg-background p-4 md:items-start ${readonlyGridClass}`}>
                   <p className="text-sm font-medium">{item.title}</p>

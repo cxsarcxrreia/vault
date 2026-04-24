@@ -1,10 +1,11 @@
-import { Check, ExternalLink, Pencil } from "lucide-react";
+import { Check, ChevronDown, ExternalLink, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   approveDeliverable,
   approveDeliverableOnBehalf,
+  deleteDeliverable,
   logManualRevision,
   requestDeliverableRevision,
   resubmitDeliverable,
@@ -213,12 +214,16 @@ export function DeliverableCard({
         ) : null}
         {deliverable.comments?.length ? (
           <details className="group border-t pt-4" open={commentsDefaultOpen}>
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium marker:hidden">
-              <span>Comments</span>
-              <span className="text-xs font-normal text-muted-foreground group-open:hidden">
-                Show {deliverable.comments.length}
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50 marker:hidden">
+              <span className="flex items-center gap-2">
+                <span>Comments</span>
+                <span className="text-xs font-normal text-muted-foreground">({deliverable.comments.length})</span>
               </span>
-              <span className="hidden text-xs font-normal text-muted-foreground group-open:inline">Hide</span>
+              <span className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+                <span className="group-open:hidden">Show comments</span>
+                <span className="hidden group-open:inline">Hide comments</span>
+                <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+              </span>
             </summary>
             <div className="mt-3 space-y-2">
               {deliverable.comments.map((comment) => (
@@ -231,6 +236,15 @@ export function DeliverableCard({
               ))}
             </div>
           </details>
+        ) : null}
+        {mode === "admin" && projectId ? (
+          <form action={deleteDeliverable} className={deliverable.comments?.length ? "" : "border-t pt-4"}>
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="deliverableId" value={deliverable.id} />
+            <Button type="submit" variant="danger">
+              Delete
+            </Button>
+          </form>
         ) : null}
       </CardContent>
     </Card>

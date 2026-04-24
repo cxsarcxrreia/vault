@@ -39,6 +39,11 @@ const deliverableLinkSchema = z.object({
   externalUrl: z.string().url().optional().or(z.literal(""))
 });
 
+const deleteDeliverableSchema = z.object({
+  deliverableId: uuidSchema,
+  projectId: uuidSchema
+});
+
 const documentSchema = z.object({
   projectId: uuidSchema,
   title: z.string().min(2).max(160),
@@ -46,6 +51,11 @@ const documentSchema = z.object({
   phaseKey: documentPhaseSchema.default(DEFAULT_DOCUMENT_PHASE_KEY),
   externalUrl: z.string().url(),
   visibleToClient: z.boolean()
+});
+
+const deleteDocumentSchema = z.object({
+  projectId: uuidSchema,
+  documentId: uuidSchema
 });
 
 const manualRevisionSchema = z.object({
@@ -780,6 +790,37 @@ export async function createProjectDocument(formData: FormData) {
   redirect(`/admin/projects/${parsed.data.projectId}?updated=document-added&phase=${parsed.data.phaseKey}#documents`);
 }
 
+export async function deleteProjectDocument(formData: FormData) {
+  const parsed = deleteDocumentSchema.safeParse({
+    projectId: formData.get("projectId"),
+    documentId: formData.get("documentId")
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects/${formData.get("projectId")}?error=${encodeURIComponent("Document not found.")}`);
+  }
+
+  const { supabase, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Archived projects are read-only. Restore the project before editing documents.")}`);
+  }
+
+  const { error } = await supabase
+    .from("documents")
+    .delete()
+    .eq("id", parsed.data.documentId)
+    .eq("project_id", parsed.data.projectId);
+
+  if (error) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=document-deleted#documents`);
+}
+
 export async function createResponsibilityItem(formData: FormData) {
   const parsed = responsibilitySchema.safeParse({
     projectId: formData.get("projectId"),
@@ -944,6 +985,37 @@ export async function createDeliverable(formData: FormData) {
 
   revalidatePath(`/admin/projects/${parsed.data.projectId}`);
   redirect(`/admin/projects/${parsed.data.projectId}?updated=deliverable-created`);
+}
+
+export async function deleteDeliverable(formData: FormData) {
+  const parsed = deleteDeliverableSchema.safeParse({
+    deliverableId: formData.get("deliverableId"),
+    projectId: formData.get("projectId")
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects/${formData.get("projectId")}?error=${encodeURIComponent("Deliverable not found.")}`);
+  }
+
+  const { supabase, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Archived projects are read-only. Restore the project before deleting deliverables.")}`);
+  }
+
+  const { error } = await supabase
+    .from("deliverables")
+    .delete()
+    .eq("id", parsed.data.deliverableId)
+    .eq("project_id", parsed.data.projectId);
+
+  if (error) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=deliverable-deleted`);
 }
 
 export async function updateDeliverableLink(formData: FormData) {

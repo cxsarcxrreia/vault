@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FileText, FolderOpen, Plus } from "lucide-react";
-import { createProjectDocument } from "@/features/projects/actions";
+import { createProjectDocument, deleteProjectDocument } from "@/features/projects/actions";
 import {
   DOCUMENT_PHASES,
   DEFAULT_DOCUMENT_PHASE_KEY,
@@ -132,9 +132,20 @@ export function DocumentList({
                             </div>
                           </div>
                         </div>
-                        <ButtonLink href={document.externalUrl} variant="outline" target="_blank" rel="noreferrer">
-                          Open
-                        </ButtonLink>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <ButtonLink href={document.externalUrl} variant="outline" target="_blank" rel="noreferrer">
+                            Open
+                          </ButtonLink>
+                          {canManage ? (
+                            <form action={deleteProjectDocument}>
+                              <input type="hidden" name="projectId" value={projectId} />
+                              <input type="hidden" name="documentId" value={document.id} />
+                              <Button type="submit" variant="danger">
+                                Delete
+                              </Button>
+                            </form>
+                          ) : null}
+                        </div>
                       </li>
                     ))}
                   </ul>
