@@ -3,7 +3,7 @@ import { FormMessage } from "@/components/shared/form-message";
 import { SetupRequired } from "@/components/shared/setup-required";
 import { Card, CardContent } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
-import { getAdminProjects } from "@/features/projects/queries";
+import { getAdminDashboardMetrics } from "@/features/projects/queries";
 
 type AdminPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -12,8 +12,8 @@ type AdminPageProps = {
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const params = searchParams ? await searchParams : {};
   const error = typeof params.error === "string" ? params.error : null;
-  const result = await getAdminProjects();
-  const activeProjects = result.data.filter((project) => project.status === "active");
+  const result = await getAdminDashboardMetrics();
+  const metrics = result.data;
 
   return (
     <>
@@ -27,23 +27,33 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         {error ? <FormMessage type="error">{error}</FormMessage> : null}
         {result.setupRequired ? <SetupRequired message={result.error} /> : null}
       </div>
-      <div className="grid gap-4 px-6 pb-6 md:grid-cols-3">
+      <div className="grid gap-4 px-6 pb-6 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent>
             <p className="text-sm text-muted-foreground">Active projects</p>
-            <p className="mt-2 text-3xl font-semibold">{activeProjects.length}</p>
+            <p className="mt-2 text-3xl font-semibold">{metrics.activeProjects}</p>
+            <p className="mt-2 text-xs text-muted-foreground">Projects currently in operation.</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Awaiting review</p>
-            <p className="mt-2 text-3xl font-semibold">1</p>
+            <p className="text-sm text-muted-foreground">Ready for client review</p>
+            <p className="mt-2 text-3xl font-semibold">{metrics.readyForClientReview}</p>
+            <p className="mt-2 text-xs text-muted-foreground">Deliverables sent to clients and waiting for approval or a revision request.</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Activation queue</p>
-            <p className="mt-2 text-3xl font-semibold">0</p>
+            <p className="text-sm text-muted-foreground">Revision requests</p>
+            <p className="mt-2 text-3xl font-semibold">{metrics.revisionRequests}</p>
+            <p className="mt-2 text-xs text-muted-foreground">Deliverables waiting on team resubmission.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">Ready to activate</p>
+            <p className="mt-2 text-3xl font-semibold">{metrics.readyToActivate}</p>
+            <p className="mt-2 text-xs text-muted-foreground">Projects with payment confirmed but portal not yet active.</p>
           </CardContent>
         </Card>
       </div>

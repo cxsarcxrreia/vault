@@ -1,16 +1,20 @@
 import { ContentSection } from "@/components/layout/content-section";
 import { PageHeader } from "@/components/layout/page-header";
+import { DeliverableApprovalCount } from "@/components/deliverables/deliverable-approval-count";
 import { DeliverableForm } from "@/components/deliverables/deliverable-form";
 import { DeliverablesList } from "@/components/deliverables/deliverables-list";
 import { DocumentList } from "@/components/documents/document-list";
 import { ProjectActivationPanel } from "@/components/project/project-activation-panel";
+import { ProjectCompletionSummary } from "@/components/project/project-completion-summary";
 import { ProjectStatePanel } from "@/components/project/project-state-panel";
 import { ProjectSummary } from "@/components/project/project-summary";
-import { MacroTimeline } from "@/components/project/timeline";
+import { MacroTimeline, MacroTimelineViewToggle, type MacroTimelineDisplayMode } from "@/components/project/timeline";
 import { ResponsibilityList } from "@/components/responsibilities/responsibility-list";
 import { FormMessage } from "@/components/shared/form-message";
 import { SetupRequired } from "@/components/shared/setup-required";
+import { normalizeDocumentPhaseKey } from "@/features/documents/phases";
 import { getProjectDetail } from "@/features/projects/queries";
+import { getResponsibilityPresetsForTemplate } from "@/features/projects/responsibilities";
 
 type ProjectPageProps = {
   params: Promise<{ id: string }>;
@@ -23,8 +27,16 @@ export default async function AdminProjectPage({ params, searchParams }: Project
   const error = typeof query.error === "string" ? query.error : null;
   const updated = typeof query.updated === "string" ? query.updated : null;
   const created = typeof query.created === "string" ? query.created : null;
+  const commentsFocusId = typeof query.comments === "string" ? query.comments : null;
+  const shouldOpenDeliverableComments =
+    updated === "manual-revision-logged" ||
+    updated === "deliverable-resubmitted" ||
+    updated === "approval-undone";
+  const timelineView: MacroTimelineDisplayMode = query.timeline === "cards" ? "cards" : "nodes";
+  const selectedDocumentPhase = normalizeDocumentPhaseKey(typeof query.phase === "string" ? query.phase : null);
   const result = await getProjectDetail(id);
   const project = result.data;
+  const basePath = project ? `/admin/projects/${project.id}` : `/admin/projects/${id}`;
 
   return (
     <>
@@ -42,24 +54,80 @@ export default async function AdminProjectPage({ params, searchParams }: Project
           <FormMessage type="error">{result.error ?? "Project not found."}</FormMessage>
         ) : (
           <>
-        <ProjectSummary project={project} />
+        <div id="project-summary" className="scroll-mt-6">
+          <ProjectSummary project={project} />
+        </div>
         <ProjectActivationPanel project={project} />
-        <ContentSection title="Macro timeline" description="Timeline stays high level. Approval and revision loops live inside deliverables.">
-          <MacroTimeline phases={project.phases} projectId={project.id} mode={project.status === "archived" ? "readonly" : "admin"} />
+        <ContentSection
+          title="Macro timeline"
+          description="Timeline stays high level. Approval and revision loops live inside deliverables."
+          actions={
+            <MacroTimelineViewToggle
+              basePath={basePath}
+              projectId={project.id}
+              currentView={timelineView}
+              selectedPhaseKey={selectedDocumentPhase}
+            />
+          }
+        >
+          <MacroTimeline
+            phases={project.phases}
+            projectId={project.id}
+            basePath={basePath}
+            displayMode={timelineView}
+            isProjectPaused={project.status === "paused"}
+            mode={project.status === "archived" ? "readonly" : "admin"}
+            selectedPhaseKey={selectedDocumentPhase}
+          />
         </ContentSection>
-        <ContentSection title="Deliverables" description="This is the operational center for review, approval, and revision state.">
+        <ContentSection
+          id="deliverables"
+          title={
+            <span className="inline-flex items-center gap-2">
+              Deliverables
+              <DeliverableApprovalCount deliverables={project.deliverables} />
+            </span>
+          }
+          description="This is the operational center for review, approval, and revision state."
+        >
           {project.status === "archived" ? (
             <FormMessage type="info">Archived projects are read-only. Restore this project before adding new deliverables.</FormMessage>
           ) : (
             <DeliverableForm projectId={project.id} />
           )}
-          <DeliverablesList deliverables={project.deliverables} projectId={project.id} mode={project.status === "archived" ? "readonly" : "admin"} />
+          <DeliverablesList
+            deliverables={project.deliverables}
+            projectId={project.id}
+            mode={project.status === "archived" ? "readonly" : "admin"}
+            commentsDefaultOpen={shouldOpenDeliverableComments}
+            commentsFocusId={commentsFocusId}
+          />
         </ContentSection>
-        <ContentSection title="Documents" description="Documents are lightweight metadata records with external links.">
-          <DocumentList documents={project.documents} />
+        <ContentSection id="documents" title="Documents" description="Documents are lightweight metadata records with external links, grouped by project phase.">
+          <DocumentList
+            documents={project.documents}
+            projectId={project.id}
+            mode={project.status === "archived" ? "readonly" : "admin"}
+            activePhaseKey={selectedDocumentPhase}
+            basePath={basePath}
+            timelineView={timelineView}
+          />
         </ContentSection>
-        <ContentSection title="Responsibilities" description="Clarifies what the agency owns, what the client owns, and what is shared.">
-          <ResponsibilityList items={project.responsibilities} />
+        <ContentSection id="responsibilities" title="Responsibilities" description="Clarifies what the agency owns, what the client owns, and what is shared.">
+          {!project.responsibilities.length ? (
+            <FormMessage type="warning">
+              Responsibility matrix needs to be completed before the client has clear ownership visibility.
+            </FormMessage>
+          ) : null}
+          <ResponsibilityList
+            items={project.responsibilities}
+            projectId={project.id}
+            presets={getResponsibilityPresetsForTemplate(project.templateName)}
+            mode={project.status === "archived" ? "readonly" : "admin"}
+          />
+        </ContentSection>
+        <ContentSection id="project-completion" title="Completion" description="Final handoff status across approvals and shared documents.">
+          <ProjectCompletionSummary project={project} />
         </ContentSection>
         <ProjectStatePanel project={project} />
           </>

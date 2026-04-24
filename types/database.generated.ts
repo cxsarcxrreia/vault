@@ -336,6 +336,7 @@ export type Database = {
           document_type: string
           external_url: string
           id: string
+          phase_key: string
           project_id: string
           title: string
           updated_at: string
@@ -346,6 +347,7 @@ export type Database = {
           document_type: string
           external_url: string
           id?: string
+          phase_key?: string
           project_id: string
           title: string
           updated_at?: string
@@ -356,6 +358,7 @@ export type Database = {
           document_type?: string
           external_url?: string
           id?: string
+          phase_key?: string
           project_id?: string
           title?: string
           updated_at?: string
@@ -821,7 +824,7 @@ export type Database = {
         | "complete"
         | "paused"
         | "archived"
-      responsibility_owner: "agency" | "client" | "shared"
+      responsibility_owner: "agency" | "client" | "shared" | "external"
       team_role: "owner" | "admin" | "member"
       user_type: "team" | "client"
     }
@@ -1002,7 +1005,7 @@ export const Constants = {
         "paused",
         "archived",
       ],
-      responsibility_owner: ["agency", "client", "shared"],
+      responsibility_owner: ["agency", "client", "shared", "external"],
       team_role: ["owner", "admin", "member"],
       user_type: ["team", "client"],
     },

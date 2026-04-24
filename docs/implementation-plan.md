@@ -73,7 +73,12 @@ Supabase is the persistence and auth layer. The schema starts with RLS enabled a
 - Main project state controls for draft, active, paused, and archived projects, including archive reasons.
 - Template default macro phases now populate new draft project timelines.
 - Admins can manually set macro phases active or complete from the project detail page; multiple phases may stay active when work overlaps.
+- Admin and client project timelines default to a node-based flow view with the card/block timeline kept as an alternate display mode; client timelines are read-only.
+- Responsibility matrices support agency, client, external, and shared ownership. Admins can add/update/delete rows; clients see the matrix read-only.
+- Responsibility add forms use template-aware preset title dropdowns; custom projects combine presets across all MVP templates.
+- Draft project creation can optionally include a starter responsibility matrix; projects without one show an admin warning until resolved.
 - Deliverable creation, client approval, atomic client revision request, admin resubmission, and admin approval-on-behalf actions.
+- Phase-aware documents with grouped presentation, admin phase assignment, and timeline links that filter or focus the related section.
 - Minimal neutral UI primitives and layout components.
 
 ## Later
@@ -81,7 +86,7 @@ Supabase is the persistence and auth layer. The schema starts with RLS enabled a
 - Proposal token approval page.
 - Email provider integration for notification events.
 - Granular role management UI.
-- Documents and responsibilities CRUD forms.
+- Document edit/delete controls.
 - Template editing UI for custom phase sets and responsibility presets.
 
 ## Hosted Supabase Status

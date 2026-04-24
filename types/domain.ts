@@ -12,7 +12,14 @@ export type DeliverableStatus =
   | "revision_requested"
   | "approved"
   | "delivered";
-export type ResponsibilityOwner = "agency" | "client" | "shared";
+export type ResponsibilityOwner = "agency" | "client" | "external" | "shared";
+export type DocumentPhaseKey =
+  | "onboarding"
+  | "proposal_scope"
+  | "creative_direction"
+  | "production"
+  | "deliverables"
+  | "general";
 
 export type ProjectPhase = {
   id: string;
@@ -47,6 +54,7 @@ export type ProjectDocument = {
   id: string;
   title: string;
   type: string;
+  phaseKey: DocumentPhaseKey;
   externalUrl: string;
   visibleToClient: boolean;
 };

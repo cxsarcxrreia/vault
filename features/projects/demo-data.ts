@@ -84,6 +84,7 @@ export const projects: Project[] = [
         id: "document-1",
         title: "Approved Proposal",
         type: "Proposal PDF",
+        phaseKey: "proposal_scope",
         externalUrl: "https://drive.google.com",
         visibleToClient: true
       },
@@ -91,8 +92,33 @@ export const projects: Project[] = [
         id: "document-2",
         title: "Scope Summary",
         type: "Scope summary",
+        phaseKey: "proposal_scope",
         externalUrl: "https://drive.google.com",
         visibleToClient: true
+      },
+      {
+        id: "document-3",
+        title: "Onboarding Summary",
+        type: "Onboarding notes",
+        phaseKey: "onboarding",
+        externalUrl: "https://drive.google.com",
+        visibleToClient: true
+      },
+      {
+        id: "document-4",
+        title: "Moodboard Direction",
+        type: "Moodboard",
+        phaseKey: "creative_direction",
+        externalUrl: "https://drive.google.com",
+        visibleToClient: true
+      },
+      {
+        id: "document-5",
+        title: "Production Schedule",
+        type: "Production plan",
+        phaseKey: "production",
+        externalUrl: "https://drive.google.com",
+        visibleToClient: false
       }
     ],
     responsibilities: [

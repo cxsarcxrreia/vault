@@ -4,10 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ensureClientMembership } from "@/features/auth/access";
+import { DOCUMENT_PHASE_KEY_VALUES, DEFAULT_DOCUMENT_PHASE_KEY } from "@/features/documents/phases";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { phaseKeyFromName, phaseNamesFromTemplateDefault } from "./template-phases";
 
 const uuidSchema = z.string().uuid();
+const responsibilityOwnerSchema = z.enum(["agency", "client", "external", "shared"]);
+const documentPhaseSchema = z.enum(DOCUMENT_PHASE_KEY_VALUES);
 
 const draftProjectSchema = z.object({
   projectName: z.string().min(2).max(120),
@@ -36,6 +39,15 @@ const deliverableLinkSchema = z.object({
   externalUrl: z.string().url().optional().or(z.literal(""))
 });
 
+const documentSchema = z.object({
+  projectId: uuidSchema,
+  title: z.string().min(2).max(160),
+  documentType: z.string().min(2).max(80),
+  phaseKey: documentPhaseSchema.default(DEFAULT_DOCUMENT_PHASE_KEY),
+  externalUrl: z.string().url(),
+  visibleToClient: z.boolean()
+});
+
 const manualRevisionSchema = z.object({
   deliverableId: uuidSchema,
   projectId: uuidSchema,
@@ -51,6 +63,22 @@ const archiveProjectSchema = z.object({
 const phaseActionSchema = z.object({
   projectId: uuidSchema,
   phaseId: uuidSchema
+});
+
+const responsibilitySchema = z.object({
+  projectId: uuidSchema,
+  title: z.string().min(2).max(120),
+  owner: responsibilityOwnerSchema,
+  notes: z.string().max(600).optional()
+});
+
+const updateResponsibilitySchema = responsibilitySchema.extend({
+  responsibilityId: uuidSchema
+});
+
+const deleteResponsibilitySchema = z.object({
+  projectId: uuidSchema,
+  responsibilityId: uuidSchema
 });
 
 async function getSupabaseOrRedirect() {
@@ -173,6 +201,25 @@ function toProjectPhaseRows(phaseNames: string[]) {
   });
 }
 
+function getResponsibilityRowsFromFormData(formData: FormData) {
+  const titles = formData.getAll("responsibilityTitle").map(String);
+  const owners = formData.getAll("responsibilityOwner").map(String);
+  const notes = formData.getAll("responsibilityNotes").map(String);
+
+  return titles
+    .map((title, index) => ({
+      title: title.trim(),
+      owner: owners[index],
+      notes: notes[index]?.trim() || null,
+      position: index + 1
+    }))
+    .filter((row) => row.title)
+    .map((row) => ({
+      ...row,
+      owner: responsibilityOwnerSchema.parse(row.owner)
+    }));
+}
+
 export async function createDraftProject(formData: FormData) {
   const parsed = draftProjectSchema.safeParse({
     projectName: formData.get("projectName"),
@@ -241,6 +288,32 @@ export async function createDraftProject(formData: FormData) {
 
   if (phasesError) {
     redirect(`/admin/projects/${project.id}?error=${encodeURIComponent(phasesError.message)}`);
+  }
+
+  if (formData.get("includeResponsibilities") === "1") {
+    let responsibilityRows: ReturnType<typeof getResponsibilityRowsFromFormData> = [];
+
+    try {
+      responsibilityRows = getResponsibilityRowsFromFormData(formData);
+    } catch {
+      redirect(`/admin/projects/${project.id}?error=${encodeURIComponent("Check the responsibility matrix before saving it.")}`);
+    }
+
+    if (responsibilityRows.length) {
+      const { error: responsibilityError } = await supabase.from("responsibility_items").insert(
+        responsibilityRows.map((row) => ({
+          project_id: project.id,
+          title: row.title,
+          owner: row.owner,
+          notes: row.notes,
+          position: row.position
+        }))
+      );
+
+      if (responsibilityError) {
+        redirect(`/admin/projects/${project.id}?error=${encodeURIComponent(responsibilityError.message)}`);
+      }
+    }
   }
 
   revalidatePath("/admin/projects");
@@ -669,6 +742,153 @@ export async function syncClientPortalAccess(formData: FormData) {
   redirect(`/admin/projects/${projectId}?updated=client-access-synced`);
 }
 
+export async function createProjectDocument(formData: FormData) {
+  const parsed = documentSchema.safeParse({
+    projectId: formData.get("projectId"),
+    title: formData.get("title"),
+    documentType: formData.get("documentType"),
+    phaseKey: formData.get("phaseKey") || DEFAULT_DOCUMENT_PHASE_KEY,
+    externalUrl: formData.get("externalUrl"),
+    visibleToClient: formData.get("visibleToClient") === "1"
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects/${formData.get("projectId")}?error=${encodeURIComponent("Please check the document link before adding it.")}`);
+  }
+
+  const { supabase, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Archived projects are read-only. Restore the project before adding documents.")}`);
+  }
+
+  const { error } = await supabase.from("documents").insert({
+    project_id: parsed.data.projectId,
+    title: parsed.data.title,
+    document_type: parsed.data.documentType,
+    phase_key: parsed.data.phaseKey,
+    external_url: parsed.data.externalUrl,
+    visible_to_client: parsed.data.visibleToClient
+  });
+
+  if (error) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=document-added&phase=${parsed.data.phaseKey}#documents`);
+}
+
+export async function createResponsibilityItem(formData: FormData) {
+  const parsed = responsibilitySchema.safeParse({
+    projectId: formData.get("projectId"),
+    title: formData.get("title"),
+    owner: formData.get("owner"),
+    notes: formData.get("notes") || undefined
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects/${formData.get("projectId")}?error=${encodeURIComponent("Check the responsibility row before adding it.")}`);
+  }
+
+  const { supabase, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Archived projects are read-only. Restore the project before editing responsibilities.")}`);
+  }
+
+  const { count } = await supabase
+    .from("responsibility_items")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", parsed.data.projectId);
+
+  const { error } = await supabase.from("responsibility_items").insert({
+    project_id: parsed.data.projectId,
+    title: parsed.data.title,
+    owner: parsed.data.owner,
+    notes: parsed.data.notes || null,
+    position: (count ?? 0) + 1
+  });
+
+  if (error) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=responsibility-added`);
+}
+
+export async function updateResponsibilityItem(formData: FormData) {
+  const parsed = updateResponsibilitySchema.safeParse({
+    projectId: formData.get("projectId"),
+    responsibilityId: formData.get("responsibilityId"),
+    title: formData.get("title"),
+    owner: formData.get("owner"),
+    notes: formData.get("notes") || undefined
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects/${formData.get("projectId")}?error=${encodeURIComponent("Check the responsibility row before updating it.")}`);
+  }
+
+  const { supabase, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Archived projects are read-only. Restore the project before editing responsibilities.")}`);
+  }
+
+  const { error } = await supabase
+    .from("responsibility_items")
+    .update({
+      title: parsed.data.title,
+      owner: parsed.data.owner,
+      notes: parsed.data.notes || null
+    })
+    .eq("id", parsed.data.responsibilityId)
+    .eq("project_id", parsed.data.projectId);
+
+  if (error) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=responsibility-updated`);
+}
+
+export async function deleteResponsibilityItem(formData: FormData) {
+  const parsed = deleteResponsibilitySchema.safeParse({
+    projectId: formData.get("projectId"),
+    responsibilityId: formData.get("responsibilityId")
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects/${formData.get("projectId")}?error=${encodeURIComponent("Responsibility row not found.")}`);
+  }
+
+  const { supabase, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Archived projects are read-only. Restore the project before editing responsibilities.")}`);
+  }
+
+  const { error } = await supabase
+    .from("responsibility_items")
+    .delete()
+    .eq("id", parsed.data.responsibilityId)
+    .eq("project_id", parsed.data.projectId);
+
+  if (error) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=responsibility-deleted`);
+}
+
 export async function createDeliverable(formData: FormData) {
   const parsed = deliverableSchema.safeParse({
     projectId: formData.get("projectId"),
@@ -828,7 +1048,7 @@ export async function logManualRevision(formData: FormData) {
 
   revalidatePath(`/admin/projects/${parsed.data.projectId}`);
   revalidatePath(`/portal/project/${parsed.data.projectId}`);
-  redirect(`/admin/projects/${parsed.data.projectId}?updated=manual-revision-logged`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=manual-revision-logged&comments=${parsed.data.deliverableId}`);
 }
 
 export async function approveDeliverable(formData: FormData) {
@@ -878,7 +1098,7 @@ export async function requestDeliverableRevision(formData: FormData) {
   }
 
   revalidatePath(`/portal/project/${projectId}`);
-  redirect(`/portal/project/${projectId}?updated=revision-requested`);
+  redirect(`/portal/project/${projectId}?updated=revision-requested&comments=${deliverableId}`);
 }
 
 export async function resubmitDeliverable(formData: FormData) {
@@ -934,7 +1154,7 @@ export async function resubmitDeliverable(formData: FormData) {
 
   revalidatePath(`/admin/projects/${projectId}`);
   revalidatePath(`/portal/project/${projectId}`);
-  redirect(`/admin/projects/${projectId}?updated=deliverable-resubmitted`);
+  redirect(`/admin/projects/${projectId}?updated=deliverable-resubmitted&comments=${deliverableId}`);
 }
 
 export async function approveDeliverableOnBehalf(formData: FormData) {
@@ -1022,5 +1242,5 @@ export async function undoDeliverableApproval(formData: FormData) {
 
   revalidatePath(`/admin/projects/${projectId}`);
   revalidatePath(`/portal/project/${projectId}`);
-  redirect(`/admin/projects/${projectId}?updated=approval-undone`);
+  redirect(`/admin/projects/${projectId}?updated=approval-undone&comments=${deliverableId}`);
 }

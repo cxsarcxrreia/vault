@@ -8,6 +8,16 @@ const toneClasses = {
   danger: "border-red-200 bg-red-50 text-red-700"
 };
 
+function formatBadgeText(value: string) {
+  const normalized = value.replaceAll("_", " ").trim();
+
+  if (!normalized) {
+    return normalized;
+  }
+
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
 export function Badge({
   children,
   tone = "neutral",
@@ -25,7 +35,7 @@ export function Badge({
         className
       )}
     >
-      {children}
+      {typeof children === "string" ? formatBadgeText(children) : children}
     </span>
   );
 }

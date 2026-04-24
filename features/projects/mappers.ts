@@ -1,5 +1,6 @@
 import type { Database } from "@/types/database.types";
 import type { Deliverable, Project, ProjectDocument, ProjectPhase, ResponsibilityItem } from "@/types/domain";
+import { DEFAULT_DOCUMENT_PHASE_KEY, normalizeDocumentPhaseKey } from "@/features/documents/phases";
 
 type ClientRow = Pick<Database["public"]["Tables"]["clients"]["Row"], "name" | "primary_contact_email">;
 type TemplateRow = Pick<Database["public"]["Tables"]["project_templates"]["Row"], "name" | "supports_calendar">;
@@ -51,6 +52,7 @@ export function mapDocument(row: Database["public"]["Tables"]["documents"]["Row"
     id: row.id,
     title: row.title,
     type: row.document_type,
+    phaseKey: normalizeDocumentPhaseKey(row.phase_key) ?? DEFAULT_DOCUMENT_PHASE_KEY,
     externalUrl: row.external_url,
     visibleToClient: row.visible_to_client
   };

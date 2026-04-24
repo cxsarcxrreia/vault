@@ -25,5 +25,9 @@ export function phaseKeyFromName(name: string, index: number) {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
+  if (key === "proposal_and_scope") {
+    return "proposal_scope";
+  }
+
   return key || `phase_${index + 1}`;
 }

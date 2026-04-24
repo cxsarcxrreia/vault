@@ -1,13 +1,16 @@
 import { ContentSection } from "@/components/layout/content-section";
 import { PageHeader } from "@/components/layout/page-header";
+import { DeliverableApprovalCount } from "@/components/deliverables/deliverable-approval-count";
 import { DeliverablesList } from "@/components/deliverables/deliverables-list";
 import { DocumentList } from "@/components/documents/document-list";
+import { ProjectCompletionSummary } from "@/components/project/project-completion-summary";
 import { ProjectSummary } from "@/components/project/project-summary";
-import { MacroTimeline } from "@/components/project/timeline";
+import { MacroTimeline, MacroTimelineViewToggle, type MacroTimelineDisplayMode } from "@/components/project/timeline";
 import { ResponsibilityList } from "@/components/responsibilities/responsibility-list";
 import { FormMessage } from "@/components/shared/form-message";
 import { SetupRequired } from "@/components/shared/setup-required";
 import { Card, CardContent } from "@/components/ui/card";
+import { normalizeDocumentPhaseKey } from "@/features/documents/phases";
 import { getCurrentProfile, getProjectDetail } from "@/features/projects/queries";
 import { getMainProjectState } from "@/features/projects/state";
 
@@ -21,10 +24,15 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
   const query = searchParams ? await searchParams : {};
   const error = typeof query.error === "string" ? query.error : null;
   const updated = typeof query.updated === "string" ? query.updated : null;
+  const commentsFocusId = typeof query.comments === "string" ? query.comments : null;
+  const shouldOpenDeliverableComments = updated === "revision-requested";
+  const timelineView: MacroTimelineDisplayMode = query.timeline === "cards" ? "cards" : "nodes";
+  const selectedDocumentPhase = normalizeDocumentPhaseKey(typeof query.phase === "string" ? query.phase : null);
   const [profile, result] = await Promise.all([getCurrentProfile(), getProjectDetail(id)]);
   const project = result.data;
   const isTeamPreview = profile?.user_type === "team";
   const clientMode = project?.status === "active" && !isTeamPreview ? "client" : "readonly";
+  const basePath = project ? `/portal/project/${project.id}` : `/portal/project/${id}`;
 
   return (
     <>
@@ -55,18 +63,61 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
           <FormMessage type="error">{result.error ?? "Project not found."}</FormMessage>
         ) : (
           <>
-        <ProjectSummary project={project} />
-        <ContentSection title="Timeline" description="Macro project visibility only. Revisions and approvals stay in deliverables.">
-          <MacroTimeline phases={project.phases} />
+        <div id="project-summary" className="scroll-mt-6">
+          <ProjectSummary project={project} />
+        </div>
+        <ContentSection
+          title="Timeline"
+          description="Macro project visibility only. Revisions and approvals stay in deliverables."
+          actions={
+            <MacroTimelineViewToggle
+              basePath={basePath}
+              projectId={project.id}
+              currentView={timelineView}
+              selectedPhaseKey={selectedDocumentPhase}
+            />
+          }
+        >
+          <MacroTimeline
+            phases={project.phases}
+            basePath={basePath}
+            displayMode={timelineView}
+            isProjectPaused={project.status === "paused"}
+            mode="readonly"
+            selectedPhaseKey={selectedDocumentPhase}
+          />
         </ContentSection>
-        <ContentSection title="Deliverables" description="Review links, revision availability, and approval state.">
-          <DeliverablesList deliverables={project.deliverables} projectId={project.id} mode={clientMode} />
+        <ContentSection
+          id="deliverables"
+          title={
+            <span className="inline-flex items-center gap-2">
+              Deliverables
+              <DeliverableApprovalCount deliverables={project.deliverables} />
+            </span>
+          }
+          description="Review links, revision availability, and approval state."
+        >
+          <DeliverablesList
+            deliverables={project.deliverables}
+            projectId={project.id}
+            mode={clientMode}
+            commentsDefaultOpen={shouldOpenDeliverableComments}
+            commentsFocusId={commentsFocusId}
+          />
         </ContentSection>
-        <ContentSection title="Documents" description="Important project documents and summaries.">
-          <DocumentList documents={project.documents.filter((document) => document.visibleToClient)} />
+        <ContentSection id="documents" title="Documents" description="Important project documents and summaries, grouped by project phase.">
+          <DocumentList
+            documents={project.documents.filter((document) => document.visibleToClient)}
+            activePhaseKey={selectedDocumentPhase}
+            basePath={basePath}
+            timelineView={timelineView}
+          />
         </ContentSection>
-        <ContentSection title="Responsibilities" description="Who owns each part of the work.">
+        <ContentSection id="responsibilities" title="Responsibilities" description="Who owns each part of the work.">
           <ResponsibilityList items={project.responsibilities} />
+        </ContentSection>
+        <ContentSection id="project-completion" title="Completion" description="Final handoff status across approvals and shared documents.">
+          <ProjectCompletionSummary project={project} />
         </ContentSection>
         {project.supportsCalendar ? (
           <ContentSection title="Calendar" description="Placeholder for recurring retainer cycles.">

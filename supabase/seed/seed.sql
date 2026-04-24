@@ -151,11 +151,19 @@ values
 )
 on conflict (id) do update set status = excluded.status, revisions_remaining = excluded.revisions_remaining;
 
-insert into public.documents (id, project_id, title, document_type, external_url, visible_to_client)
+insert into public.documents (id, project_id, title, document_type, phase_key, external_url, visible_to_client)
 values
-('00000000-0000-0000-0000-000000000501', '00000000-0000-0000-0000-000000000301', 'Approved Proposal', 'Proposal PDF', 'https://drive.google.com', true),
-('00000000-0000-0000-0000-000000000502', '00000000-0000-0000-0000-000000000301', 'Scope Summary', 'Scope summary', 'https://drive.google.com', true)
-on conflict (id) do update set title = excluded.title, external_url = excluded.external_url;
+('00000000-0000-0000-0000-000000000501', '00000000-0000-0000-0000-000000000301', 'Approved Proposal', 'Proposal PDF', 'proposal_scope', 'https://drive.google.com', true),
+('00000000-0000-0000-0000-000000000502', '00000000-0000-0000-0000-000000000301', 'Scope Summary', 'Scope summary', 'proposal_scope', 'https://drive.google.com', true),
+('00000000-0000-0000-0000-000000000503', '00000000-0000-0000-0000-000000000301', 'Onboarding Summary', 'Onboarding notes', 'onboarding', 'https://drive.google.com', true),
+('00000000-0000-0000-0000-000000000504', '00000000-0000-0000-0000-000000000301', 'Moodboard Direction', 'Moodboard', 'creative_direction', 'https://drive.google.com', true),
+('00000000-0000-0000-0000-000000000505', '00000000-0000-0000-0000-000000000301', 'Production Schedule', 'Production plan', 'production', 'https://drive.google.com', false)
+on conflict (id) do update set
+  title = excluded.title,
+  document_type = excluded.document_type,
+  phase_key = excluded.phase_key,
+  external_url = excluded.external_url,
+  visible_to_client = excluded.visible_to_client;
 
 insert into public.responsibility_items (id, project_id, title, owner, position)
 values

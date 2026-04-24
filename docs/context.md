@@ -148,6 +148,8 @@ Documents are lightweight metadata records with external links. Examples:
 - onboarding summary
 - scope summary
 
+Documents should carry a simple phase association so onboarding, proposal and scope, creative direction, production, deliverables, and general references do not collapse into one flat list.
+
 Do not build heavy media hosting in v1.
 
 ## Responsibilities
@@ -156,9 +158,10 @@ Responsibility rows can be owned by:
 
 - agency
 - client
+- external
 - shared
 
-Common rows include content planning, shooting, editing, scheduling, publishing, community management, paid ads setup, paid ads management, and reporting.
+Use external when a contractor, partner, or outside collaborator owns the work. Common rows include content planning, shooting, editing, scheduling, publishing, community management, paid ads setup, paid ads management, and reporting.
 
 ## Service Templates
 

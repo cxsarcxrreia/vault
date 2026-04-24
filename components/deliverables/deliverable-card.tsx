@@ -11,6 +11,7 @@ import {
   undoDeliverableApproval,
   updateDeliverableLink
 } from "@/features/projects/actions";
+import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/format";
 import type { Deliverable } from "@/types/domain";
 
@@ -26,11 +27,13 @@ const statusTone = {
 export function DeliverableCard({
   deliverable,
   projectId,
-  mode = "readonly"
+  mode = "readonly",
+  commentsDefaultOpen = false
 }: {
   deliverable: Deliverable;
   projectId?: string;
   mode?: "admin" | "client" | "readonly";
+  commentsDefaultOpen?: boolean;
 }) {
   const isReadyForClientReview = deliverable.status === "ready_for_review";
   const isRevisionPending = deliverable.status === "revision_requested";
@@ -48,7 +51,12 @@ export function DeliverableCard({
           </div>
           <Badge tone={statusTone[deliverable.status]}>{deliverable.status.replaceAll("_", " ")}</Badge>
         </div>
-        <dl className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+        <dl
+          className={cn(
+            "grid gap-3 text-sm text-muted-foreground transition-opacity sm:grid-cols-2",
+            isApproved && "opacity-55"
+          )}
+        >
           <div>
             <dt className="font-medium text-foreground">Expected delivery</dt>
             <dd>{formatDate(deliverable.expectedDeliveryDate)}</dd>
@@ -97,29 +105,48 @@ export function DeliverableCard({
           </div>
         ) : null}
         {mode === "client" && projectId ? (
-          <div className="grid gap-3 border-t pt-4">
-            <form action={approveDeliverable}>
-              <input type="hidden" name="projectId" value={projectId} />
-              <input type="hidden" name="deliverableId" value={deliverable.id} />
-              <Button type="submit" variant="outline" disabled={!canApprove || deliverable.status === "approved"}>
-                Approve deliverable
-              </Button>
-            </form>
-            <form action={requestDeliverableRevision} className="space-y-2">
-              <input type="hidden" name="projectId" value={projectId} />
-              <input type="hidden" name="deliverableId" value={deliverable.id} />
-              <textarea
-                name="body"
-                required
-                rows={3}
-                placeholder="Describe the requested revision"
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                disabled={!canRequestRevision}
-              />
-              <Button type="submit" variant="secondary" disabled={!canRequestRevision}>
-                Request revision
-              </Button>
-            </form>
+          <div className="space-y-3 border-t pt-4">
+            <h4 className="text-sm font-medium">Client actions</h4>
+            <div className="flex flex-wrap items-start gap-2">
+              {canRequestRevision ? (
+                <details className="group contents">
+                  <summary className="order-1 inline-flex h-10 cursor-pointer list-none items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/80 group-open:order-5 marker:hidden">
+                    <span className="group-open:hidden">Request revision</span>
+                    <span className="hidden group-open:inline">Hide</span>
+                  </summary>
+                  <form action={requestDeliverableRevision} className="contents">
+                    <input type="hidden" name="projectId" value={projectId} />
+                    <input type="hidden" name="deliverableId" value={deliverable.id} />
+                    <textarea
+                      name="body"
+                      required
+                      rows={3}
+                      placeholder="Describe the requested revision"
+                      className="order-3 basis-full rounded-md border bg-background px-3 py-2 text-sm"
+                    />
+                    <Button type="submit" variant="secondary" className="order-4">
+                      Send revision request
+                    </Button>
+                  </form>
+                </details>
+              ) : (
+                <Button type="button" variant="secondary" className="order-1" disabled>
+                  Request revision
+                </Button>
+              )}
+              <form action={approveDeliverable} className="order-2">
+                <input type="hidden" name="projectId" value={projectId} />
+                <input type="hidden" name="deliverableId" value={deliverable.id} />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  className="hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
+                  disabled={!canApprove || isApproved}
+                >
+                  Approve deliverable
+                </Button>
+              </form>
+            </div>
           </div>
         ) : null}
         {mode === "admin" && projectId ? (
@@ -185,17 +212,25 @@ export function DeliverableCard({
           </form>
         ) : null}
         {deliverable.comments?.length ? (
-          <div className="space-y-2 border-t pt-4">
-            <h4 className="text-sm font-medium">Comments</h4>
-            {deliverable.comments.map((comment) => (
-              <div key={comment.id} className="rounded-md bg-muted p-3 text-sm">
-                <p className="text-muted-foreground">{comment.body}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {comment.authorName ?? "User"} - {formatDate(comment.createdAt)}
-                </p>
-              </div>
-            ))}
-          </div>
+          <details className="group border-t pt-4" open={commentsDefaultOpen}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium marker:hidden">
+              <span>Comments</span>
+              <span className="text-xs font-normal text-muted-foreground group-open:hidden">
+                Show {deliverable.comments.length}
+              </span>
+              <span className="hidden text-xs font-normal text-muted-foreground group-open:inline">Hide</span>
+            </summary>
+            <div className="mt-3 space-y-2">
+              {deliverable.comments.map((comment) => (
+                <div key={comment.id} className="rounded-md bg-muted p-3 text-sm">
+                  <p className="text-muted-foreground">{comment.body}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {comment.authorName ?? "User"} - {formatDate(comment.createdAt)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </details>
         ) : null}
       </CardContent>
     </Card>

@@ -8,7 +8,33 @@ import { mapDeliverable, mapDocument, mapPhase, mapProject, mapResponsibility } 
 import { phaseNamesFromTemplateDefault } from "./template-phases";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type AdminDashboardMetrics = {
+  activeProjects: number;
+  readyForClientReview: number;
+  revisionRequests: number;
+  readyToActivate: number;
+};
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function getDemoDashboardMetrics(): AdminDashboardMetrics {
+  const operationalProjects = demoProjects.filter((project) => ["active", "paused"].includes(project.status));
+
+  return {
+    activeProjects: demoProjects.filter((project) => project.status === "active").length,
+    readyForClientReview: operationalProjects.reduce(
+      (total, project) => total + project.deliverables.filter((deliverable) => deliverable.status === "ready_for_review").length,
+      0
+    ),
+    revisionRequests: operationalProjects.reduce(
+      (total, project) => total + project.deliverables.filter((deliverable) => deliverable.status === "revision_requested").length,
+      0
+    ),
+    readyToActivate: demoProjects.filter(
+      (project) => project.activationState === "payment_confirmed" && project.status === "payment_confirmed"
+    ).length
+  };
+}
 
 async function getClient() {
   if (!hasSupabaseEnv()) {
@@ -123,6 +149,52 @@ export async function getAdminProjects(): Promise<DataState<Project[]>> {
   return { data: data.map((project: any) => mapProject(project)), error: null };
 }
 
+export async function getAdminDashboardMetrics(): Promise<DataState<AdminDashboardMetrics>> {
+  const supabase = await getClient();
+  const emptyMetrics: AdminDashboardMetrics = {
+    activeProjects: 0,
+    readyForClientReview: 0,
+    revisionRequests: 0,
+    readyToActivate: 0
+  };
+
+  if (!supabase) {
+    return { data: getDemoDashboardMetrics(), error: "Supabase environment is not configured." };
+  }
+
+  const { data, error } = await supabase
+    .from("projects")
+    .select("id,status,activation_state,deliverables(status)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return emptyWithError(emptyMetrics, error);
+  }
+
+  const projects = data ?? [];
+  const operationalProjects = projects.filter((project: any) => ["active", "paused"].includes(project.status));
+
+  return {
+    data: {
+      activeProjects: projects.filter((project: any) => project.status === "active").length,
+      readyForClientReview: operationalProjects.reduce(
+        (total: number, project: any) =>
+          total + (project.deliverables ?? []).filter((deliverable: any) => deliverable.status === "ready_for_review").length,
+        0
+      ),
+      revisionRequests: operationalProjects.reduce(
+        (total: number, project: any) =>
+          total + (project.deliverables ?? []).filter((deliverable: any) => deliverable.status === "revision_requested").length,
+        0
+      ),
+      readyToActivate: projects.filter(
+        (project: any) => project.activation_state === "payment_confirmed" && project.status === "payment_confirmed"
+      ).length
+    },
+    error: null
+  };
+}
+
 export async function getPortalProjects(): Promise<DataState<Project[]>> {
   const supabase = await getClient();
 
@@ -182,7 +254,7 @@ export async function getProjectDetail(id: string): Promise<DataState<Project | 
   const [phasesResult, deliverablesResult, documentsResult, responsibilitiesResult] = await Promise.all([
     supabase.from("project_phases").select("*").eq("project_id", id).order("position"),
     supabase.from("deliverables").select("*").eq("project_id", id).order("created_at"),
-    supabase.from("documents").select("*").eq("project_id", id).order("created_at"),
+    supabase.from("documents").select("*").eq("project_id", id).order("phase_key").order("created_at"),
     supabase.from("responsibility_items").select("*").eq("project_id", id).order("position")
   ]);
 

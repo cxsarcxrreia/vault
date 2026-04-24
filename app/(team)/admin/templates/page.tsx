@@ -4,6 +4,7 @@ import { SetupRequired } from "@/components/shared/setup-required";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { getProjectTemplates } from "@/features/projects/queries";
+import { getResponsibilityPresetsForTemplate } from "@/features/projects/responsibilities";
 
 export default async function TemplatesPage() {
   const result = await getProjectTemplates();
@@ -26,7 +27,7 @@ export default async function TemplatesPage() {
                   {template.supportsCalendar ? (
                     <Badge tone="review">
                       <CalendarDays className="mr-1 size-3" />
-                      calendar
+                      Calendar
                     </Badge>
                   ) : null}
                 </div>
@@ -47,6 +48,14 @@ export default async function TemplatesPage() {
                   <h3 className="text-xs font-medium uppercase text-muted-foreground">Deliverable suggestions</h3>
                   <div className="flex flex-wrap gap-2">
                     {template.deliverableTypeSuggestions.map((item) => (
+                      <Badge key={item}>{item}</Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xs font-medium uppercase text-muted-foreground">Responsibility presets</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {getResponsibilityPresetsForTemplate(template.name).map((item) => (
                       <Badge key={item}>{item}</Badge>
                     ))}
                   </div>
