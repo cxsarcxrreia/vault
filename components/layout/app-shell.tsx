@@ -20,7 +20,7 @@ export function AppShell({
     <div className="min-h-screen bg-background">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-card px-4 py-5 md:block">
         <Link href="/" className="block text-sm font-semibold">
-          Client Portal
+          VAULT™
         </Link>
         <p className="mt-1 text-xs text-muted-foreground">{area}</p>
         <nav className="mt-8 space-y-1">
@@ -45,7 +45,7 @@ export function AppShell({
       <div className="md:pl-64">
         <header className="flex min-h-14 items-center justify-between border-b bg-card px-6 md:hidden">
           <Link href="/" className="text-sm font-semibold">
-            Client Portal
+            VAULT™
           </Link>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">{area}</span>
