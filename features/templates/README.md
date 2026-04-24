@@ -8,4 +8,10 @@ Start with the three MVP templates only:
 - Monthly Content Retainer
 - Branding / Graphic Design
 
+Templates now also support custom team-created service templates built from the standard macro phase nodes. Custom templates should stay lightweight:
+
+- they customize phase selection and ordering first
+- they do not create separate product shells
+- they should feed the same universal project shell and document grouping flow
+
 Do not create separate product shells per service. Templates configure the universal project shell.

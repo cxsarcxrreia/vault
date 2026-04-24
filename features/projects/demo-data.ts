@@ -6,6 +6,14 @@ export const projectTemplates: ProjectTemplate[] = [
     name: "One time Content Production",
     slug: "one-time-content-production",
     supportsCalendar: false,
+    phaseDefinitions: [
+      { name: "Onboarding", phaseKey: "onboarding", allowsDocuments: true, isStandard: true },
+      { name: "Proposal and Scope", phaseKey: "proposal_scope", allowsDocuments: true, isStandard: true },
+      { name: "Creative Direction", phaseKey: "creative_direction", allowsDocuments: true, isStandard: true },
+      { name: "Production", phaseKey: "production", allowsDocuments: true, isStandard: true },
+      { name: "Deliverables", phaseKey: "deliverables", allowsDocuments: true, isStandard: true },
+      { name: "Project Complete", phaseKey: "project_complete", allowsDocuments: false, isStandard: true }
+    ],
     defaultPhases: ["Onboarding", "Proposal and Scope", "Creative Direction", "Production", "Deliverables", "Project Complete"],
     deliverableTypeSuggestions: ["Reels", "Photos", "Promo video", "Aftermovie", "Supporting assets"]
   },
@@ -14,6 +22,14 @@ export const projectTemplates: ProjectTemplate[] = [
     name: "Monthly Content Retainer",
     slug: "monthly-content-retainer",
     supportsCalendar: true,
+    phaseDefinitions: [
+      { name: "Onboarding", phaseKey: "onboarding", allowsDocuments: true, isStandard: true },
+      { name: "Proposal and Scope", phaseKey: "proposal_scope", allowsDocuments: true, isStandard: true },
+      { name: "Creative Direction", phaseKey: "creative_direction", allowsDocuments: true, isStandard: true },
+      { name: "Production", phaseKey: "production", allowsDocuments: true, isStandard: true },
+      { name: "Deliverables", phaseKey: "deliverables", allowsDocuments: true, isStandard: true },
+      { name: "Project Complete", phaseKey: "project_complete", allowsDocuments: false, isStandard: true }
+    ],
     defaultPhases: ["Onboarding", "Proposal and Scope", "Creative Direction", "Production", "Deliverables", "Project Complete"],
     deliverableTypeSuggestions: ["Monthly reels", "Monthly photos", "Captions", "Story sets", "Graphic assets"]
   },
@@ -22,6 +38,14 @@ export const projectTemplates: ProjectTemplate[] = [
     name: "Branding / Graphic Design",
     slug: "branding-graphic-design",
     supportsCalendar: false,
+    phaseDefinitions: [
+      { name: "Onboarding", phaseKey: "onboarding", allowsDocuments: true, isStandard: true },
+      { name: "Proposal and Scope", phaseKey: "proposal_scope", allowsDocuments: true, isStandard: true },
+      { name: "Creative Direction", phaseKey: "creative_direction", allowsDocuments: true, isStandard: true },
+      { name: "Production", phaseKey: "production", allowsDocuments: true, isStandard: true },
+      { name: "Deliverables", phaseKey: "deliverables", allowsDocuments: true, isStandard: true },
+      { name: "Project Complete", phaseKey: "project_complete", allowsDocuments: false, isStandard: true }
+    ],
     defaultPhases: ["Onboarding", "Proposal and Scope", "Creative Direction", "Production", "Deliverables", "Project Complete"],
     deliverableTypeSuggestions: ["Logo pack", "Brand book", "Templates", "Color palette", "Typography set"]
   }
@@ -50,12 +74,12 @@ export const projects: Project[] = [
     endsOn: "2026-05-15",
     supportsCalendar: false,
     phases: [
-      { id: "phase-1", name: "Onboarding", phaseKey: "onboarding", status: "complete", position: 1 },
-      { id: "phase-2", name: "Proposal and Scope", phaseKey: "proposal_scope", status: "complete", position: 2 },
-      { id: "phase-3", name: "Creative Direction", phaseKey: "creative_direction", status: "complete", position: 3 },
-      { id: "phase-4", name: "Production", phaseKey: "production", status: "active", position: 4 },
-      { id: "phase-5", name: "Deliverables", phaseKey: "deliverables", status: "not_started", position: 5 },
-      { id: "phase-6", name: "Project Complete", phaseKey: "project_complete", status: "not_started", position: 6 }
+      { id: "phase-1", name: "Onboarding", phaseKey: "onboarding", allowsDocuments: true, status: "complete", position: 1 },
+      { id: "phase-2", name: "Proposal and Scope", phaseKey: "proposal_scope", allowsDocuments: true, status: "complete", position: 2 },
+      { id: "phase-3", name: "Creative Direction", phaseKey: "creative_direction", allowsDocuments: true, status: "complete", position: 3 },
+      { id: "phase-4", name: "Production", phaseKey: "production", allowsDocuments: true, status: "active", position: 4 },
+      { id: "phase-5", name: "Deliverables", phaseKey: "deliverables", allowsDocuments: true, status: "not_started", position: 5 },
+      { id: "phase-6", name: "Project Complete", phaseKey: "project_complete", allowsDocuments: false, status: "not_started", position: 6 }
     ],
     deliverables: [
       {

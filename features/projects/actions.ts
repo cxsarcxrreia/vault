@@ -4,13 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ensureClientMembership } from "@/features/auth/access";
-import { DOCUMENT_PHASE_KEY_VALUES, DEFAULT_DOCUMENT_PHASE_KEY } from "@/features/documents/phases";
+import { DEFAULT_DOCUMENT_PHASE_KEY, normalizeDocumentPhaseKey } from "@/features/documents/phases";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { phaseKeyFromName, phaseNamesFromTemplateDefault } from "./template-phases";
+import type { TemplatePhaseDefinition } from "@/types/domain";
+import { phaseKeyFromName, templatePhaseDefinitionsFromDefault } from "./template-phases";
 
 const uuidSchema = z.string().uuid();
 const responsibilityOwnerSchema = z.enum(["agency", "client", "external", "shared"]);
-const documentPhaseSchema = z.enum(DOCUMENT_PHASE_KEY_VALUES);
+const documentPhaseSchema = z
+  .string()
+  .transform((value) => normalizeDocumentPhaseKey(value) ?? DEFAULT_DOCUMENT_PHASE_KEY);
 
 const draftProjectSchema = z.object({
   projectName: z.string().min(2).max(120),
@@ -89,6 +92,21 @@ const updateResponsibilitySchema = responsibilitySchema.extend({
 const deleteResponsibilitySchema = z.object({
   projectId: uuidSchema,
   responsibilityId: uuidSchema
+});
+
+const serviceTemplateSchema = z.object({
+  templateName: z.string().min(2).max(120),
+  source: z.enum(["templates", "project-draft"]).default("templates"),
+  phaseDefinitions: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(120),
+        phaseKey: z.string().min(1).max(120),
+        allowsDocuments: z.boolean(),
+        isStandard: z.boolean().optional()
+      })
+    )
+    .min(1)
 });
 
 async function getSupabaseOrRedirect() {
@@ -176,9 +194,9 @@ async function syncPrimaryClientMembership(supabase: any, clientId: string) {
   }
 }
 
-async function getDefaultPhaseNamesForTemplate(supabase: any, templateId?: string) {
+async function getDefaultPhaseDefinitionsForTemplate(supabase: any, templateId?: string) {
   if (!templateId) {
-    return phaseNamesFromTemplateDefault(null);
+    return templatePhaseDefinitionsFromDefault(null);
   }
 
   const { data, error } = await supabase
@@ -188,23 +206,24 @@ async function getDefaultPhaseNamesForTemplate(supabase: any, templateId?: strin
     .maybeSingle();
 
   if (error || !data) {
-    return phaseNamesFromTemplateDefault(null);
+    return templatePhaseDefinitionsFromDefault(null);
   }
 
-  return phaseNamesFromTemplateDefault(data.default_phases);
+  return templatePhaseDefinitionsFromDefault(data.default_phases);
 }
 
-function toProjectPhaseRows(phaseNames: string[]) {
+function toProjectPhaseRows(phaseDefinitions: TemplatePhaseDefinition[]) {
   const usedKeys = new Map<string, number>();
 
-  return phaseNames.map((name, index) => {
-    const baseKey = phaseKeyFromName(name, index);
+  return phaseDefinitions.map((phase, index) => {
+    const baseKey = phaseKeyFromName(phase.phaseKey || phase.name, index);
     const seenCount = usedKeys.get(baseKey) ?? 0;
     usedKeys.set(baseKey, seenCount + 1);
 
     return {
-      name,
+      name: phase.name,
       phase_key: seenCount ? `${baseKey}_${seenCount + 1}` : baseKey,
+      allows_documents: phase.allowsDocuments,
       position: index + 1,
       status: index === 0 ? "active" : "not_started"
     };
@@ -230,6 +249,135 @@ function getResponsibilityRowsFromFormData(formData: FormData) {
     }));
 }
 
+function slugifyTemplateName(value: string) {
+  const slug = value
+    .toLowerCase()
+    .trim()
+    .replaceAll("&", "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug || "service-template";
+}
+
+async function getUniqueTemplateSlug(supabase: any, organizationId: string, templateName: string) {
+  const baseSlug = slugifyTemplateName(templateName);
+  const { data, error } = await supabase
+    .from("project_templates")
+    .select("slug")
+    .eq("organization_id", organizationId)
+    .like("slug", `${baseSlug}%`);
+
+  if (error) {
+    throw error;
+  }
+
+  const existingSlugs = new Set((data ?? []).map((item: { slug: string }) => item.slug));
+
+  if (!existingSlugs.has(baseSlug)) {
+    return baseSlug;
+  }
+
+  let suffix = 2;
+  let candidate = `${baseSlug}-${suffix}`;
+
+  while (existingSlugs.has(candidate)) {
+    suffix += 1;
+    candidate = `${baseSlug}-${suffix}`;
+  }
+
+  return candidate;
+}
+
+function getRedirectPathForTemplateBuilder(source: "templates" | "project-draft", params?: Record<string, string>) {
+  const searchParams = new URLSearchParams();
+
+  searchParams.set("source", source);
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    searchParams.set(key, value);
+  }
+
+  return `/admin/templates/new?${searchParams.toString()}`;
+}
+
+export async function createServiceTemplate(formData: FormData) {
+  const source = formData.get("source") === "project-draft" ? "project-draft" : "templates";
+  const parsedPhaseDefinitions = formData
+    .getAll("phaseDefinition")
+    .map(String)
+    .flatMap((value) => {
+      try {
+        return [JSON.parse(value)];
+      } catch {
+        return [];
+      }
+    });
+  const parsed = serviceTemplateSchema.safeParse({
+    templateName: formData.get("templateName"),
+    source,
+    phaseDefinitions: parsedPhaseDefinitions
+  });
+
+  if (!parsed.success) {
+    redirect(
+      getRedirectPathForTemplateBuilder(source, {
+        error: "Please give the template a name and add at least one macro phase."
+      })
+    );
+  }
+
+  const { supabase, profile } = await getTeamContext();
+  const uniquePhaseDefinitions = parsed.data.phaseDefinitions.filter(
+    (phase, index, values) => values.findIndex((item) => item.phaseKey === phase.phaseKey) === index
+  );
+
+  if (!uniquePhaseDefinitions.length) {
+    redirect(
+      getRedirectPathForTemplateBuilder(source, {
+        error: "Please add at least one macro phase before saving the template."
+      })
+    );
+  }
+
+  let slug = "service-template";
+
+  try {
+    slug = await getUniqueTemplateSlug(supabase, profile.organization_id!, parsed.data.templateName);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to prepare the template slug.";
+    redirect(getRedirectPathForTemplateBuilder(source, { error: message }));
+  }
+
+  const { data, error } = await supabase
+    .from("project_templates")
+    .insert({
+      organization_id: profile.organization_id!,
+      name: parsed.data.templateName,
+      slug,
+      description: null,
+      supports_calendar: false,
+      default_phases: uniquePhaseDefinitions,
+      deliverable_type_suggestions: [],
+      responsibility_presets: []
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    redirect(getRedirectPathForTemplateBuilder(source, { error: error?.message ?? "Unable to save the template." }));
+  }
+
+  revalidatePath("/admin/templates");
+  revalidatePath("/admin/projects");
+
+  if (source === "project-draft") {
+    redirect(`/admin/projects?templateId=${data.id}&templateCreated=1`);
+  }
+
+  redirect("/admin/templates?created=service-template");
+}
+
 export async function createDraftProject(formData: FormData) {
   const parsed = draftProjectSchema.safeParse({
     projectName: formData.get("projectName"),
@@ -247,7 +395,7 @@ export async function createDraftProject(formData: FormData) {
   }
 
   const { supabase, user, profile } = await getTeamContext();
-  const phaseRows = toProjectPhaseRows(await getDefaultPhaseNamesForTemplate(supabase, parsed.data.templateId || undefined));
+  const phaseRows = toProjectPhaseRows(await getDefaultPhaseDefinitionsForTemplate(supabase, parsed.data.templateId || undefined));
   const firstPhaseKey = phaseRows[0]?.phase_key ?? "onboarding";
 
   const { data: client, error: clientError } = await supabase

@@ -14,8 +14,6 @@ export function FormMessage({
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    setVisible(true);
-
     if (!autoDismissMs) {
       return;
     }

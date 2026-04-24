@@ -10,7 +10,7 @@ import { ResponsibilityList } from "@/components/responsibilities/responsibility
 import { FormMessage } from "@/components/shared/form-message";
 import { SetupRequired } from "@/components/shared/setup-required";
 import { Card, CardContent } from "@/components/ui/card";
-import { normalizeDocumentPhaseKey } from "@/features/documents/phases";
+import { getDocumentPhaseOrderForProjectPhases, normalizeDocumentPhaseKey } from "@/features/documents/phases";
 import { getCurrentProfile, getProjectDetail } from "@/features/projects/queries";
 import { getMainProjectState } from "@/features/projects/state";
 
@@ -47,6 +47,7 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
   const basePath = project ? `/portal/project/${project.id}` : `/portal/project/${id}`;
   const updateMessage = getUpdateMessage(updated);
   const hasMappedSectionUpdate = updated ? Object.values(portalSectionUpdates).some((values) => values.includes(updated)) : false;
+  const documentPhaseOrder = project ? getDocumentPhaseOrderForProjectPhases(project.phases) : [];
 
   return (
     <>
@@ -124,6 +125,7 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
           <DocumentList
             documents={project.documents.filter((document) => document.visibleToClient)}
             activePhaseKey={selectedDocumentPhase}
+            phaseOrder={documentPhaseOrder}
             basePath={basePath}
             timelineView={timelineView}
           />

@@ -18,6 +18,7 @@ export function mapPhase(row: Database["public"]["Tables"]["project_phases"]["Ro
     id: row.id,
     name: row.name,
     phaseKey: row.phase_key,
+    allowsDocuments: row.allows_documents,
     status: row.status,
     position: row.position
   };

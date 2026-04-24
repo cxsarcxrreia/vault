@@ -13,18 +13,20 @@ export type DeliverableStatus =
   | "approved"
   | "delivered";
 export type ResponsibilityOwner = "agency" | "client" | "external" | "shared";
-export type DocumentPhaseKey =
-  | "onboarding"
-  | "proposal_scope"
-  | "creative_direction"
-  | "production"
-  | "deliverables"
-  | "general";
+export type DocumentPhaseKey = string;
+
+export type TemplatePhaseDefinition = {
+  name: string;
+  phaseKey: string;
+  allowsDocuments: boolean;
+  isStandard?: boolean;
+};
 
 export type ProjectPhase = {
   id: string;
   name: string;
   phaseKey: string;
+  allowsDocuments: boolean;
   status: PhaseStatus;
   position: number;
 };
@@ -79,6 +81,7 @@ export type ProjectTemplate = {
   name: string;
   slug: string;
   supportsCalendar: boolean;
+  phaseDefinitions: TemplatePhaseDefinition[];
   defaultPhases: string[];
   deliverableTypeSuggestions: string[];
 };

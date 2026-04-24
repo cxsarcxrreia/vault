@@ -2,10 +2,10 @@ import Link from "next/link";
 import { FileText, FolderOpen, Plus } from "lucide-react";
 import { createProjectDocument, deleteProjectDocument } from "@/features/projects/actions";
 import {
-  DOCUMENT_PHASES,
   DEFAULT_DOCUMENT_PHASE_KEY,
   getDocumentPhaseDescription,
-  getDocumentPhaseLabel
+  getDocumentPhaseLabel,
+  normalizeDocumentPhaseKey
 } from "@/features/documents/phases";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmSubmitButton } from "@/components/shared/confirm-submit-button";
@@ -19,6 +19,7 @@ type DocumentListProps = {
   projectId?: string;
   mode?: "readonly" | "admin";
   activePhaseKey?: DocumentPhaseKey | null;
+  phaseOrder?: DocumentPhaseKey[];
   basePath?: string;
   timelineView?: "nodes" | "cards";
 };
@@ -39,27 +40,52 @@ export function DocumentList({
   projectId,
   mode = "readonly",
   activePhaseKey = null,
+  phaseOrder,
   basePath,
   timelineView
 }: DocumentListProps) {
+  const orderedPhaseKeys = [
+    ...(phaseOrder?.filter((phaseKey, index, values) => values.indexOf(phaseKey) === index) ?? [])
+  ];
+  const documentPhaseKeys = documents
+    .map((document) => document.phaseKey ?? DEFAULT_DOCUMENT_PHASE_KEY)
+    .filter((phaseKey, index, values) => values.indexOf(phaseKey) === index);
+  const visiblePhaseKeys = [
+    ...orderedPhaseKeys.filter((phaseKey) => phaseKey !== DEFAULT_DOCUMENT_PHASE_KEY),
+    ...documentPhaseKeys.filter(
+      (phaseKey) => phaseKey !== DEFAULT_DOCUMENT_PHASE_KEY && !orderedPhaseKeys.includes(phaseKey)
+    ),
+    DEFAULT_DOCUMENT_PHASE_KEY
+  ].filter((phaseKey, index, values) => values.indexOf(phaseKey) === index);
+
+  const visiblePhaseDefinitions = visiblePhaseKeys.map((phaseKey) => ({
+    key: phaseKey,
+    label: getDocumentPhaseLabel(phaseKey),
+    description: getDocumentPhaseDescription(phaseKey)
+  }));
+
+  const normalizedActivePhaseKey =
+    activePhaseKey && visiblePhaseDefinitions.some((phase) => phase.key === activePhaseKey) ? activePhaseKey : null;
+
   const documentsByPhase = new Map<DocumentPhaseKey, ProjectDocument[]>();
 
-  for (const phase of DOCUMENT_PHASES) {
+  for (const phase of visiblePhaseDefinitions) {
     documentsByPhase.set(phase.key, []);
   }
 
   for (const document of documents) {
     const phaseKey = document.phaseKey ?? DEFAULT_DOCUMENT_PHASE_KEY;
-    documentsByPhase.set(phaseKey, [...(documentsByPhase.get(phaseKey) ?? []), document]);
+    const resolvedPhaseKey = documentsByPhase.has(phaseKey) ? phaseKey : DEFAULT_DOCUMENT_PHASE_KEY;
+    documentsByPhase.set(resolvedPhaseKey, [...(documentsByPhase.get(resolvedPhaseKey) ?? []), document]);
   }
 
-  const groupedPhases = DOCUMENT_PHASES.map((phase) => ({
+  const groupedPhases = visiblePhaseDefinitions.map((phase) => ({
     ...phase,
     documents: documentsByPhase.get(phase.key) ?? []
   }));
 
-  const visibleGroups = activePhaseKey
-    ? groupedPhases.filter((phase) => phase.key === activePhaseKey)
+  const visibleGroups = normalizedActivePhaseKey
+    ? groupedPhases.filter((phase) => phase.key === normalizedActivePhaseKey)
     : groupedPhases.filter((phase) => phase.documents.length > 0);
   const canManage = mode === "admin" && Boolean(projectId);
 
@@ -69,22 +95,24 @@ export function DocumentList({
         <div className="flex flex-wrap gap-2">
           <Link
             href={getFilterHref(basePath, timelineView)}
-            aria-current={!activePhaseKey ? "page" : undefined}
+            aria-current={!normalizedActivePhaseKey ? "page" : undefined}
             className={cn(
               "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-              !activePhaseKey ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+              !normalizedActivePhaseKey
+                ? "bg-primary text-primary-foreground"
+                : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
             All phases
           </Link>
-          {DOCUMENT_PHASES.map((phase) => (
+          {visiblePhaseDefinitions.map((phase) => (
             <Link
               key={phase.key}
               href={getFilterHref(basePath, timelineView, phase.key)}
-              aria-current={activePhaseKey === phase.key ? "page" : undefined}
+              aria-current={normalizedActivePhaseKey === phase.key ? "page" : undefined}
               className={cn(
                 "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-                activePhaseKey === phase.key
+                normalizedActivePhaseKey === phase.key
                   ? "bg-primary text-primary-foreground"
                   : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
@@ -123,7 +151,7 @@ export function DocumentList({
                             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                               <span>{document.type}</span>
                               <span aria-hidden="true">/</span>
-                              <span>{getDocumentPhaseLabel(document.phaseKey)}</span>
+                              <span>{getDocumentPhaseLabel(document.phaseKey ?? DEFAULT_DOCUMENT_PHASE_KEY)}</span>
                               {!document.visibleToClient ? (
                                 <>
                                   <span aria-hidden="true">/</span>
@@ -197,8 +225,12 @@ export function DocumentList({
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-medium">Phase</span>
-                <select name="phaseKey" defaultValue={activePhaseKey ?? DEFAULT_DOCUMENT_PHASE_KEY} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
-                  {DOCUMENT_PHASES.map((phase) => (
+                <select
+                  name="phaseKey"
+                  defaultValue={normalizeDocumentPhaseKey(normalizedActivePhaseKey ?? DEFAULT_DOCUMENT_PHASE_KEY) ?? DEFAULT_DOCUMENT_PHASE_KEY}
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                >
+                  {visiblePhaseDefinitions.map((phase) => (
                     <option key={phase.key} value={phase.key}>
                       {phase.label}
                     </option>

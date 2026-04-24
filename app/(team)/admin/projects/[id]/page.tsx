@@ -12,7 +12,7 @@ import { MacroTimeline, MacroTimelineViewToggle, type MacroTimelineDisplayMode }
 import { ResponsibilityList } from "@/components/responsibilities/responsibility-list";
 import { FormMessage } from "@/components/shared/form-message";
 import { SetupRequired } from "@/components/shared/setup-required";
-import { normalizeDocumentPhaseKey } from "@/features/documents/phases";
+import { getDocumentPhaseOrderForProjectPhases, normalizeDocumentPhaseKey } from "@/features/documents/phases";
 import { getProjectDetail } from "@/features/projects/queries";
 import { getResponsibilityPresetsForTemplate } from "@/features/projects/responsibilities";
 
@@ -64,6 +64,7 @@ export default async function AdminProjectPage({ params, searchParams }: Project
   const basePath = project ? `/admin/projects/${project.id}` : `/admin/projects/${id}`;
   const updateMessage = getUpdateMessage(updated);
   const hasMappedSectionUpdate = updated ? Object.values(sectionUpdates).some((values) => values.includes(updated)) : false;
+  const documentPhaseOrder = project ? getDocumentPhaseOrderForProjectPhases(project.phases) : [];
 
   return (
     <>
@@ -140,6 +141,7 @@ export default async function AdminProjectPage({ params, searchParams }: Project
             projectId={project.id}
             mode={project.status === "archived" ? "readonly" : "admin"}
             activePhaseKey={selectedDocumentPhase}
+            phaseOrder={documentPhaseOrder}
             basePath={basePath}
             timelineView={timelineView}
           />

@@ -5,7 +5,7 @@ import type { Client, Project, ProjectTemplate } from "@/types/domain";
 import { emptyWithError, type DataState } from "./errors";
 import { clients as demoClients, getProjectById, projectTemplates as demoTemplates, projects as demoProjects } from "./demo-data";
 import { mapDeliverable, mapDocument, mapPhase, mapProject, mapResponsibility } from "./mappers";
-import { phaseNamesFromTemplateDefault } from "./template-phases";
+import { phaseNamesFromTemplateDefault, templatePhaseDefinitionsFromDefault } from "./template-phases";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type AdminDashboardMetrics = {
@@ -85,6 +85,7 @@ export async function getProjectTemplates(): Promise<DataState<ProjectTemplate[]
       name: template.name,
       slug: template.slug,
       supportsCalendar: template.supports_calendar,
+      phaseDefinitions: templatePhaseDefinitionsFromDefault(template.default_phases),
       defaultPhases: phaseNamesFromTemplateDefault(template.default_phases),
       deliverableTypeSuggestions: template.deliverable_type_suggestions
     })),

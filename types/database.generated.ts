@@ -509,6 +509,7 @@ export type Database = {
       }
       project_phases: {
         Row: {
+          allows_documents: boolean
           created_at: string
           due_on: string | null
           id: string
@@ -521,6 +522,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allows_documents?: boolean
           created_at?: string
           due_on?: string | null
           id?: string
@@ -533,6 +535,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allows_documents?: boolean
           created_at?: string
           due_on?: string | null
           id?: string

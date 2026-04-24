@@ -55,6 +55,14 @@ const phaseKeyAliases: Record<string, DocumentPhaseKey> = {
   general: "general"
 };
 
+function formatPhaseLabel(value: string) {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function normalizeDocumentPhaseKey(value: string | null | undefined): DocumentPhaseKey | null {
   if (!value) {
     return null;
@@ -67,17 +75,42 @@ export function normalizeDocumentPhaseKey(value: string | null | undefined): Doc
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
-  return phaseKeyAliases[normalized] ?? null;
+  return phaseKeyAliases[normalized] ?? (normalized || null);
 }
 
 export function getDocumentPhaseLabel(phaseKey: DocumentPhaseKey) {
-  return DOCUMENT_PHASES.find((phase) => phase.key === phaseKey)?.label ?? "General";
+  return DOCUMENT_PHASES.find((phase) => phase.key === phaseKey)?.label ?? formatPhaseLabel(phaseKey);
 }
 
 export function getDocumentPhaseDescription(phaseKey: DocumentPhaseKey) {
-  return DOCUMENT_PHASES.find((phase) => phase.key === phaseKey)?.description ?? "";
+  return (
+    DOCUMENT_PHASES.find((phase) => phase.key === phaseKey)?.description ??
+    "Documents grouped under this custom project phase."
+  );
 }
 
 export function getDocumentPhaseKeyForTimelinePhase(phaseKey: string, phaseName: string): DocumentPhaseKey | null {
   return normalizeDocumentPhaseKey(phaseKey) ?? normalizeDocumentPhaseKey(phaseName);
+}
+
+export function getDocumentPhaseOrderForProjectPhases(
+  phases: Array<{ phaseKey: string; name: string; allowsDocuments?: boolean }>
+): DocumentPhaseKey[] {
+  const orderedKeys: DocumentPhaseKey[] = [];
+  const seen = new Set<DocumentPhaseKey>();
+
+  for (const phase of phases) {
+    if (phase.allowsDocuments === false) {
+      continue;
+    }
+
+    const documentPhaseKey = getDocumentPhaseKeyForTimelinePhase(phase.phaseKey, phase.name);
+
+    if (documentPhaseKey && !seen.has(documentPhaseKey)) {
+      seen.add(documentPhaseKey);
+      orderedKeys.push(documentPhaseKey);
+    }
+  }
+
+  return orderedKeys;
 }

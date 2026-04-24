@@ -80,6 +80,9 @@ Supabase is the persistence and auth layer. The schema starts with RLS enabled a
 - Deliverable creation, client approval, atomic client revision request, admin resubmission, and admin approval-on-behalf actions.
 - Phase-aware documents with grouped presentation, admin phase assignment, and timeline links that filter or focus the related section.
 - Minimal neutral UI primitives and layout components.
+- Team-created service templates with a custom macro timeline builder based on the standard phase nodes.
+- Draft project creation handoff that routes custom template selection through the template builder and resumes the draft form afterward.
+- Project document grouping and document phase options now follow the actual project timeline phase order when a custom template changes it.
 
 ## Later
 
@@ -87,7 +90,7 @@ Supabase is the persistence and auth layer. The schema starts with RLS enabled a
 - Email provider integration for notification events.
 - Granular role management UI.
 - Document edit/delete controls.
-- Template editing UI for custom phase sets and responsibility presets.
+- Template editing UI for custom deliverable suggestions and responsibility presets.
 
 ## Hosted Supabase Status
 
