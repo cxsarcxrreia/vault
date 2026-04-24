@@ -1,5 +1,6 @@
 import { Check, ChevronDown, ExternalLink, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmSubmitButton } from "@/components/shared/confirm-submit-button";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -138,14 +139,16 @@ export function DeliverableCard({
               <form action={approveDeliverable} className="order-2">
                 <input type="hidden" name="projectId" value={projectId} />
                 <input type="hidden" name="deliverableId" value={deliverable.id} />
-                <Button
-                  type="submit"
-                  variant="outline"
+                <ConfirmSubmitButton
+                  triggerLabel="Approve deliverable"
+                  title="Approve deliverable?"
+                  description="This confirms the deliverable as approved by the client. This is a final approval step for this revision state."
+                  confirmLabel="Approve"
+                  triggerVariant="outline"
+                  confirmVariant="success"
                   className="hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
                   disabled={!canApprove || isApproved}
-                >
-                  Approve deliverable
-                </Button>
+                />
               </form>
             </div>
           </div>
@@ -241,9 +244,14 @@ export function DeliverableCard({
           <form action={deleteDeliverable} className={deliverable.comments?.length ? "" : "border-t pt-4"}>
             <input type="hidden" name="projectId" value={projectId} />
             <input type="hidden" name="deliverableId" value={deliverable.id} />
-            <Button type="submit" variant="danger">
-              Delete
-            </Button>
+            <ConfirmSubmitButton
+              triggerLabel="Delete"
+              title="Delete deliverable?"
+              description="This permanently removes this deliverable, including its project-level record and comment history on this page. This action cannot be undone."
+              confirmLabel="Delete"
+              triggerVariant="danger"
+              confirmVariant="danger"
+            />
           </form>
         ) : null}
       </CardContent>

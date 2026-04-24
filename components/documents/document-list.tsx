@@ -8,6 +8,7 @@ import {
   getDocumentPhaseLabel
 } from "@/features/documents/phases";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmSubmitButton } from "@/components/shared/confirm-submit-button";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
@@ -140,9 +141,14 @@ export function DocumentList({
                             <form action={deleteProjectDocument}>
                               <input type="hidden" name="projectId" value={projectId} />
                               <input type="hidden" name="documentId" value={document.id} />
-                              <Button type="submit" variant="danger">
-                                Delete
-                              </Button>
+                              <ConfirmSubmitButton
+                                triggerLabel="Delete"
+                                title="Delete document?"
+                                description="This permanently removes this document record from the project. The external file link will no longer appear here."
+                                confirmLabel="Delete"
+                                triggerVariant="danger"
+                                confirmVariant="danger"
+                              />
                             </form>
                           ) : null}
                         </div>

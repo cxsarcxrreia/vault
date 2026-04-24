@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { deleteResponsibilityItem, updateResponsibilityItem } from "@/features/projects/actions";
+import { ConfirmSubmitButton } from "@/components/shared/confirm-submit-button";
 import { RESPONSIBILITY_OWNERS } from "@/features/projects/responsibilities";
 import { Button } from "@/components/ui/button";
 import type { ResponsibilityItem } from "@/types/domain";
@@ -74,9 +75,15 @@ export function EditableResponsibilityRow({ item, projectId, gridClassName }: Ed
         <form action={deleteResponsibilityItem}>
           <input type="hidden" name="projectId" value={projectId} />
           <input type="hidden" name="responsibilityId" value={item.id} />
-          <Button type="submit" variant="danger" className="h-10 px-4">
-            Delete
-          </Button>
+          <ConfirmSubmitButton
+            triggerLabel="Delete"
+            title="Delete responsibility?"
+            description="This permanently removes this responsibility item from the project. This action cannot be undone."
+            confirmLabel="Delete"
+            triggerVariant="danger"
+            confirmVariant="danger"
+            className="h-10 px-4"
+          />
         </form>
       </div>
     </div>

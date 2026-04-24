@@ -21,6 +21,31 @@ type ProjectPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
+const sectionUpdates: Record<string, string[]> = {
+  activation: ["deal-status", "payment-confirmed", "activated", "client-access-synced"],
+  timeline: ["timeline-started", "timeline-completed"],
+  deliverables: [
+    "deliverable-created",
+    "deliverable-deleted",
+    "deliverable-link-updated",
+    "manual-revision-logged",
+    "deliverable-resubmitted",
+    "approved-on-behalf",
+    "approval-undone"
+  ],
+  documents: ["document-added", "document-deleted"],
+  responsibilities: ["responsibility-added", "responsibility-updated", "responsibility-deleted"],
+  projectState: ["paused", "resumed", "archived", "restored"]
+};
+
+function getUpdateMessage(updated: string | null) {
+  return updated ? `Updated: ${updated.replaceAll("-", " ")}` : null;
+}
+
+function matchesSectionUpdate(updated: string | null, section: keyof typeof sectionUpdates) {
+  return updated ? sectionUpdates[section].includes(updated) : false;
+}
+
 export default async function AdminProjectPage({ params, searchParams }: ProjectPageProps) {
   const { id } = await params;
   const query = searchParams ? await searchParams : {};
@@ -37,6 +62,8 @@ export default async function AdminProjectPage({ params, searchParams }: Project
   const result = await getProjectDetail(id);
   const project = result.data;
   const basePath = project ? `/admin/projects/${project.id}` : `/admin/projects/${id}`;
+  const updateMessage = getUpdateMessage(updated);
+  const hasMappedSectionUpdate = updated ? Object.values(sectionUpdates).some((values) => values.includes(updated)) : false;
 
   return (
     <>
@@ -47,8 +74,8 @@ export default async function AdminProjectPage({ params, searchParams }: Project
       />
       <div className="space-y-8 p-6">
         {error ? <FormMessage type="error">{error}</FormMessage> : null}
-        {updated ? <FormMessage type="success">Updated: {updated.replaceAll("-", " ")}</FormMessage> : null}
-        {created ? <FormMessage type="success">Draft project created.</FormMessage> : null}
+        {updated && !hasMappedSectionUpdate ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
+        {created ? <FormMessage type="success" autoDismissMs={5000}>Draft project created.</FormMessage> : null}
         {result.setupRequired ? <SetupRequired message={result.error} /> : null}
         {!project ? (
           <FormMessage type="error">{result.error ?? "Project not found."}</FormMessage>
@@ -57,7 +84,9 @@ export default async function AdminProjectPage({ params, searchParams }: Project
         <div id="project-summary" className="scroll-mt-6">
           <ProjectSummary project={project} />
         </div>
+        {matchesSectionUpdate(updated, "activation") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
         <ProjectActivationPanel project={project} />
+        {matchesSectionUpdate(updated, "timeline") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
         <ContentSection
           title="Macro timeline"
           description="Timeline stays high level. Approval and revision loops live inside deliverables."
@@ -90,6 +119,7 @@ export default async function AdminProjectPage({ params, searchParams }: Project
           }
           description="This is the operational center for review, approval, and revision state."
         >
+          {matchesSectionUpdate(updated, "deliverables") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
           {project.status === "archived" ? (
             <FormMessage type="info">Archived projects are read-only. Restore this project before adding new deliverables.</FormMessage>
           ) : (
@@ -104,6 +134,7 @@ export default async function AdminProjectPage({ params, searchParams }: Project
           />
         </ContentSection>
         <ContentSection id="documents" title="Documents" description="Documents are lightweight metadata records with external links, grouped by project phase.">
+          {matchesSectionUpdate(updated, "documents") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
           <DocumentList
             documents={project.documents}
             projectId={project.id}
@@ -114,6 +145,7 @@ export default async function AdminProjectPage({ params, searchParams }: Project
           />
         </ContentSection>
         <ContentSection id="responsibilities" title="Responsibilities" description="Clarifies what the agency owns, what the client owns, and what is shared.">
+          {matchesSectionUpdate(updated, "responsibilities") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
           {!project.responsibilities.length ? (
             <FormMessage type="warning">
               Responsibility matrix needs to be completed before the client has clear ownership visibility.
@@ -129,6 +161,7 @@ export default async function AdminProjectPage({ params, searchParams }: Project
         <ContentSection id="project-completion" title="Completion" description="Final handoff status across approvals and shared documents.">
           <ProjectCompletionSummary project={project} />
         </ContentSection>
+        {matchesSectionUpdate(updated, "projectState") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
         <ProjectStatePanel project={project} />
           </>
         )}

@@ -19,6 +19,18 @@ type PortalProjectPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
+const portalSectionUpdates: Record<string, string[]> = {
+  deliverables: ["deliverable-approved", "revision-requested"]
+};
+
+function getUpdateMessage(updated: string | null) {
+  return updated ? `Updated: ${updated.replaceAll("-", " ")}` : null;
+}
+
+function matchesSectionUpdate(updated: string | null, section: keyof typeof portalSectionUpdates) {
+  return updated ? portalSectionUpdates[section].includes(updated) : false;
+}
+
 export default async function PortalProjectPage({ params, searchParams }: PortalProjectPageProps) {
   const { id } = await params;
   const query = searchParams ? await searchParams : {};
@@ -33,6 +45,8 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
   const isTeamPreview = profile?.user_type === "team";
   const clientMode = project?.status === "active" && !isTeamPreview ? "client" : "readonly";
   const basePath = project ? `/portal/project/${project.id}` : `/portal/project/${id}`;
+  const updateMessage = getUpdateMessage(updated);
+  const hasMappedSectionUpdate = updated ? Object.values(portalSectionUpdates).some((values) => values.includes(updated)) : false;
 
   return (
     <>
@@ -57,7 +71,7 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
           </FormMessage>
         ) : null}
         {error ? <FormMessage type="error">{error}</FormMessage> : null}
-        {updated ? <FormMessage type="success">Updated: {updated.replaceAll("-", " ")}</FormMessage> : null}
+        {updated && !hasMappedSectionUpdate ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
         {result.setupRequired ? <SetupRequired message={result.error} /> : null}
         {!project ? (
           <FormMessage type="error">{result.error ?? "Project not found."}</FormMessage>
@@ -97,6 +111,7 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
           }
           description="Review links, revision availability, and approval state."
         >
+          {matchesSectionUpdate(updated, "deliverables") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
           <DeliverablesList
             deliverables={project.deliverables}
             projectId={project.id}
