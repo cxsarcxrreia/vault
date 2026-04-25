@@ -121,7 +121,7 @@ function PhaseActions({ phase, projectId }: { phase: ProjectPhase; projectId?: s
         <form action={completeProjectPhase}>
           <input type="hidden" name="projectId" value={projectId} />
           <input type="hidden" name="phaseId" value={phase.id} />
-          <Button variant="success" className="h-8 px-3 text-xs">
+          <Button variant="outline" className="h-8 px-3 text-xs">
             Complete
           </Button>
         </form>
@@ -243,7 +243,7 @@ export function MacroTimeline({
                     </Link>
                   </div>
                   <div className="min-w-0 space-y-3 md:mt-4 md:flex md:flex-col md:items-center md:text-center">
-                    <div className="space-y-2 md:flex md:flex-col md:items-center">
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 md:flex-col md:items-center">
                       <Link href={href} className="inline-block rounded-sm text-sm font-semibold leading-5 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                         {phase.name}
                       </Link>

@@ -109,6 +109,10 @@ const serviceTemplateSchema = z.object({
     .min(1)
 });
 
+const deleteServiceTemplateSchema = z.object({
+  templateId: uuidSchema
+});
+
 async function getSupabaseOrRedirect() {
   const supabase = await createSupabaseServerClient();
 
@@ -376,6 +380,35 @@ export async function createServiceTemplate(formData: FormData) {
   }
 
   redirect("/admin/templates?created=service-template");
+}
+
+export async function deleteServiceTemplate(formData: FormData) {
+  const parsed = deleteServiceTemplateSchema.safeParse({
+    templateId: formData.get("templateId")
+  });
+
+  if (!parsed.success) {
+    redirect("/admin/templates?error=Unable%20to%20delete%20the%20template.");
+  }
+
+  const { supabase, profile } = await getTeamContext();
+  const { error, count } = await supabase
+    .from("project_templates")
+    .delete({ count: "exact" })
+    .eq("id", parsed.data.templateId)
+    .eq("organization_id", profile.organization_id!);
+
+  if (error) {
+    redirect(`/admin/templates?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (!count) {
+    redirect("/admin/templates?error=Only%20custom%20templates%20can%20be%20deleted.");
+  }
+
+  revalidatePath("/admin/templates");
+  revalidatePath("/admin/projects");
+  redirect("/admin/templates?deleted=service-template");
 }
 
 export async function createDraftProject(formData: FormData) {

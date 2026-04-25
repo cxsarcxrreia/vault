@@ -81,6 +81,7 @@ export type ProjectTemplate = {
   name: string;
   slug: string;
   supportsCalendar: boolean;
+  isCustom?: boolean;
   phaseDefinitions: TemplatePhaseDefinition[];
   defaultPhases: string[];
   deliverableTypeSuggestions: string[];

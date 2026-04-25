@@ -19,16 +19,7 @@ export function ProjectActivationPanel({ project }: { project: Project }) {
       : "draft";
 
   if (isActive) {
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-semibold">Activation flow</h2>
-            <Badge tone="active">Portal active</Badge>
-          </div>
-        </CardHeader>
-      </Card>
-    );
+    return null;
   }
 
   return (

@@ -72,7 +72,7 @@ export async function getProjectTemplates(): Promise<DataState<ProjectTemplate[]
 
   const { data, error } = await supabase
     .from("project_templates")
-    .select("id,name,slug,supports_calendar,default_phases,deliverable_type_suggestions")
+    .select("id,name,slug,organization_id,supports_calendar,default_phases,deliverable_type_suggestions")
     .order("name");
 
   if (error) {
@@ -85,6 +85,7 @@ export async function getProjectTemplates(): Promise<DataState<ProjectTemplate[]
       name: template.name,
       slug: template.slug,
       supportsCalendar: template.supports_calendar,
+      isCustom: Boolean(template.organization_id),
       phaseDefinitions: templatePhaseDefinitionsFromDefault(template.default_phases),
       defaultPhases: phaseNamesFromTemplateDefault(template.default_phases),
       deliverableTypeSuggestions: template.deliverable_type_suggestions

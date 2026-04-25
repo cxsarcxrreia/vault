@@ -6,7 +6,7 @@ import { DeliverablesList } from "@/components/deliverables/deliverables-list";
 import { DocumentList } from "@/components/documents/document-list";
 import { ProjectActivationPanel } from "@/components/project/project-activation-panel";
 import { ProjectCompletionSummary } from "@/components/project/project-completion-summary";
-import { ProjectStatePanel } from "@/components/project/project-state-panel";
+import { ProjectManageMenu } from "@/components/project/project-manage-menu";
 import { ProjectSummary } from "@/components/project/project-summary";
 import { MacroTimeline, MacroTimelineViewToggle, type MacroTimelineDisplayMode } from "@/components/project/timeline";
 import { ResponsibilityList } from "@/components/responsibilities/responsibility-list";
@@ -83,10 +83,11 @@ export default async function AdminProjectPage({ params, searchParams }: Project
         ) : (
           <>
         <div id="project-summary" className="scroll-mt-6">
-          <ProjectSummary project={project} />
+          <ProjectSummary project={project} actions={<ProjectManageMenu project={project} />} />
         </div>
+        {matchesSectionUpdate(updated, "projectState") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
         {matchesSectionUpdate(updated, "activation") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
-        <ProjectActivationPanel project={project} />
+        {project.activationState !== "activated" ? <ProjectActivationPanel project={project} /> : null}
         {matchesSectionUpdate(updated, "timeline") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
         <ContentSection
           title="Macro timeline"
@@ -163,8 +164,6 @@ export default async function AdminProjectPage({ params, searchParams }: Project
         <ContentSection id="project-completion" title="Completion" description="Final handoff status across approvals and shared documents.">
           <ProjectCompletionSummary project={project} />
         </ContentSection>
-        {matchesSectionUpdate(updated, "projectState") ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
-        <ProjectStatePanel project={project} />
           </>
         )}
       </div>

@@ -1,10 +1,12 @@
 import { CalendarDays } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { ConfirmSubmitButton } from "@/components/shared/confirm-submit-button";
 import { FormMessage } from "@/components/shared/form-message";
 import { SetupRequired } from "@/components/shared/setup-required";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { deleteServiceTemplate } from "@/features/projects/actions";
 import { getProjectTemplates } from "@/features/projects/queries";
 import { getResponsibilityPresetsForTemplate } from "@/features/projects/responsibilities";
 
@@ -15,6 +17,8 @@ type TemplatesPageProps = {
 export default async function TemplatesPage({ searchParams }: TemplatesPageProps) {
   const params = searchParams ? await searchParams : {};
   const created = typeof params.created === "string" ? params.created : null;
+  const deleted = typeof params.deleted === "string" ? params.deleted : null;
+  const error = typeof params.error === "string" ? params.error : null;
   const result = await getProjectTemplates();
 
   return (
@@ -30,7 +34,9 @@ export default async function TemplatesPage({ searchParams }: TemplatesPageProps
         }
       />
       <div className="space-y-4 p-6">
+        {error ? <FormMessage type="error">{error}</FormMessage> : null}
         {created === "service-template" ? <FormMessage type="success" autoDismissMs={5000}>Service template created.</FormMessage> : null}
+        {deleted === "service-template" ? <FormMessage type="success" autoDismissMs={5000}>Service template deleted.</FormMessage> : null}
         {result.setupRequired ? <SetupRequired message={result.error} /> : null}
         <div className="grid gap-4 lg:grid-cols-3">
           {result.data.map((template) => {
@@ -92,6 +98,19 @@ export default async function TemplatesPage({ searchParams }: TemplatesPageProps
                       <p className="text-sm text-muted-foreground">No responsibility presets yet.</p>
                     )}
                   </div>
+                  {template.isCustom ? (
+                    <form action={deleteServiceTemplate} className="border-t pt-4">
+                      <input type="hidden" name="templateId" value={template.id} />
+                      <ConfirmSubmitButton
+                        triggerLabel="Delete"
+                        triggerVariant="danger"
+                        title="Delete service template?"
+                        description="This permanently deletes this custom template. Projects already created from it will stay in place."
+                        confirmLabel="Delete template"
+                        confirmVariant="danger"
+                      />
+                    </form>
+                  ) : null}
                 </CardContent>
               </Card>
             );
