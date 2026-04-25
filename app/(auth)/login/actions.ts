@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { resolveLoginAccess } from "@/features/auth/access";
+import { buildAuthCallbackUrl, getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -33,7 +34,7 @@ export async function sendMagicLink(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(access.reason ?? "access-not-enabled")}`);
   }
 
-  const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/auth/callback?next=${access.next}`;
+  const redirectTo = buildAuthCallbackUrl(access.next);
 
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
@@ -61,8 +62,8 @@ export async function createDevSignInLink(formData: FormData) {
     redirect("/login?error=invalid-email");
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const isLocalApp = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
+  const appUrl = getCanonicalAppUrl();
+  const isLocalApp = isLocalAppUrl(appUrl);
 
   if (process.env.NODE_ENV === "production" || !isLocalApp) {
     redirect("/login?error=dev-link-disabled");
@@ -75,7 +76,7 @@ export async function createDevSignInLink(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(access.reason ?? "access-not-enabled")}`);
   }
 
-  const redirectTo = `${appUrl}/api/auth/callback?next=${access.next}`;
+  const redirectTo = buildAuthCallbackUrl(access.next);
 
   const firstAttempt = await service.auth.admin.generateLink({
     type: "magiclink",

@@ -57,6 +57,8 @@ Do not commit real secrets.
 
 For hosted Supabase, use the same variable names. `NEXT_PUBLIC_SUPABASE_URL` must be the hosted project URL, `NEXT_PUBLIC_SUPABASE_ANON_KEY` must be the public anon key, and `SUPABASE_SERVICE_ROLE_KEY` must stay server-only. The app validates malformed or placeholder values at startup boundaries.
 
+In production, set `NEXT_PUBLIC_APP_URL` to the canonical deployed app origin, for example `https://vault-fosv.onrender.com`. Magic-link callbacks are built from this value and sent to Supabase as `https://vault-fosv.onrender.com/api/auth/callback` for default portal sign-in.
+
 `ADMIN_BOOTSTRAP_EMAILS` is a comma-separated allowlist for the first team owner claim, for example `owner@agency.com,ops@agency.com`. In production, set this before anyone uses `/admin/bootstrap`. Local development allows bootstrap without this variable so fresh local databases are not blocked.
 
 Run a masked connection check:
@@ -84,6 +86,8 @@ Then replace local environment values with hosted project values in your deploym
 If the CLI reports that no access token is provided, run `npx supabase login` or set `SUPABASE_ACCESS_TOKEN` before hosted `db push` or type generation.
 
 After an allowlisted first team user signs in, open `/admin/bootstrap` and claim first owner access. This creates the initial agency workspace owner and then locks itself once an owner exists.
+
+In Supabase Authentication URL Configuration, set the Site URL to your deployed app origin and add the callback URL for your deployment, for example `https://vault-fosv.onrender.com/api/auth/callback`. Keep local development entries such as `http://localhost:3000/api/auth/callback` only if you still use them.
 
 ## Auth Model
 

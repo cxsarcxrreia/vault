@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isLocalAppUrl } from "@/lib/app-url";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database.types";
 
@@ -32,8 +33,7 @@ function sanitizeNext(next: string) {
 }
 
 function isLocalDevelopment() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  return process.env.NODE_ENV !== "production" && (appUrl.includes("localhost") || appUrl.includes("127.0.0.1"));
+  return process.env.NODE_ENV !== "production" && isLocalAppUrl();
 }
 
 export function getBootstrapOwnerEmails() {

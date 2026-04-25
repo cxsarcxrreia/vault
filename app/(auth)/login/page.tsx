@@ -1,6 +1,7 @@
 import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
 import { createDevSignInLink, sendMagicLink } from "./actions";
 import { HashSessionHandler } from "./hash-session-handler";
 
@@ -13,8 +14,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const status = typeof params.status === "string" ? params.status : null;
   const error = typeof params.error === "string" ? params.error : null;
   const next = typeof params.next === "string" ? params.next : "/portal";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const showDevLink = process.env.NODE_ENV !== "production" && (appUrl.includes("localhost") || appUrl.includes("127.0.0.1"));
+  const appUrl = getCanonicalAppUrl();
+  const showDevLink = process.env.NODE_ENV !== "production" && isLocalAppUrl(appUrl);
 
   return (
     <main className="grid min-h-screen place-items-center px-6 py-12">
