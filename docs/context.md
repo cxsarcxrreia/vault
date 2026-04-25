@@ -70,7 +70,7 @@ The public layer supports:
 - minimal product landing page
 - agency owner registration
 - magic-link completion for creating the first organization owner
-- sign-in routing into the correct member area
+- one neutral sign-in route that sends existing team users to the admin panel and clients to the client portal based on database membership
 
 ### Team Panel
 
@@ -231,6 +231,7 @@ Use:
 - Keep agencies in `organizations`.
 - Resolve team access through `organization_members`, not email alone.
 - Keep client access explicit through `client_users`.
+- Keep registration only for new agency owners; clients and non-owner agency members are invited by an agency and then sign in with magic links.
 - Scope clients, projects, templates, phases, deliverables, documents, responsibilities, comments, approvals, and notification events to an organization.
 - Preserve Paladar as the first real agency instance, with `rangercardeal@gmail.com` as the owner/admin candidate.
 - Keep Stripe and payment enforcement out of the MVP until billing is explicitly planned.

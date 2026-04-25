@@ -21,6 +21,7 @@ type AccessDecision = {
   reason?: string;
 };
 
+const DEFAULT_SIGN_IN_PATH = "/";
 const DEFAULT_PORTAL_PATH = "/portal";
 const DEFAULT_ADMIN_PATH = "/admin";
 const BOOTSTRAP_PATH = "/admin/bootstrap";
@@ -31,7 +32,7 @@ function normalizeEmail(email: string) {
 
 function sanitizeNext(next: string) {
   if (!next.startsWith("/") || next.startsWith("//")) {
-    return DEFAULT_PORTAL_PATH;
+    return DEFAULT_SIGN_IN_PATH;
   }
 
   return next;
@@ -342,7 +343,7 @@ export async function resolvePostLoginPath(requestedNext: string, profile: Profi
   const next = sanitizeNext(requestedNext);
 
   if (!profile) {
-    return DEFAULT_PORTAL_PATH;
+    return DEFAULT_SIGN_IN_PATH;
   }
 
   if (profile.user_type === "team" && profile.organization_id && profile.team_role) {

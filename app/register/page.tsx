@@ -3,7 +3,8 @@ import Link from "next/link";
 import { FormMessage } from "@/components/shared/form-message";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { startAgencyRegistration } from "./actions";
+import { getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
+import { createDevAgencyRegistrationLink, createDevPendingRegistrationLink, startAgencyRegistration } from "./actions";
 
 type RegisterPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -13,6 +14,8 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   const params = searchParams ? await searchParams : {};
   const status = typeof params.status === "string" ? params.status : null;
   const error = typeof params.error === "string" ? params.error : null;
+  const appUrl = getCanonicalAppUrl();
+  const showDevLink = process.env.NODE_ENV !== "production" && isLocalAppUrl(appUrl);
 
   return (
     <main className="min-h-screen bg-background px-6 py-12">
@@ -52,7 +55,15 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
               {error === "registration-not-found" ? (
                 <FormMessage type="error">Start registration again so the workspace can be created.</FormMessage>
               ) : null}
-              {error && !["invalid-registration", "email-already-has-agency", "registration-not-found"].includes(error) ? (
+              {error === "over_email_send_rate_limit" || error === "429" ? (
+                <FormMessage type="warning">
+                  Supabase rate-limited email sending for this project. The registration was saved; use local dev continue below or wait before trying email again.
+                </FormMessage>
+              ) : null}
+              {error === "dev-link-disabled" ? (
+                <FormMessage type="error">Local dev continue is disabled outside localhost development.</FormMessage>
+              ) : null}
+              {error && !["invalid-registration", "email-already-has-agency", "registration-not-found", "over_email_send_rate_limit", "429", "dev-link-disabled"].includes(error) ? (
                 <FormMessage type="error">Unable to continue: {error}</FormMessage>
               ) : null}
 
@@ -90,10 +101,32 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
                 <Button type="submit" className="w-full">
                   Create agency
                 </Button>
+                {showDevLink ? (
+                  <Button formAction={createDevAgencyRegistrationLink} type="submit" variant="outline" className="w-full">
+                    Continue locally without email
+                  </Button>
+                ) : null}
               </form>
+              {showDevLink && (error === "over_email_send_rate_limit" || error === "429") ? (
+                <form action={createDevPendingRegistrationLink} className="space-y-3 border-t pt-4">
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium">Pending owner email</span>
+                    <input
+                      required
+                      name="ownerEmail"
+                      type="email"
+                      placeholder="owner@agency.com"
+                      className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-foreground/10"
+                    />
+                  </label>
+                  <Button type="submit" variant="outline" className="w-full">
+                    Continue pending registration
+                  </Button>
+                </form>
+              ) : null}
               <p className="text-center text-sm text-muted-foreground">
                 Already have access?{" "}
-                <Link href="/login?next=/admin" className="font-medium text-foreground underline-offset-4 hover:underline">
+                <Link href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
                   Sign in
                 </Link>
               </p>

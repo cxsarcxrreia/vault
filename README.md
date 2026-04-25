@@ -103,6 +103,7 @@ The app uses one Supabase magic-link mechanism for both team and client users. T
 - First owner bootstrap is allowed only while no owner exists and the email is in `ADMIN_BOOTSTRAP_EMAILS` in production.
 - Team access requires an active `organization_members` row. `profiles.organization_id` and `profiles.team_role` remain as compatibility mirrors.
 - Client access requires a `profiles` row with `user_type = client` plus an explicit organization-scoped `client_users` membership.
+- Sign-in is not split into team/client choices. After the magic link is confirmed, database membership routes team users to `/admin` and clients to `/portal`.
 - Project activation creates or updates the primary client contact auth user/profile and `client_users` membership.
 - `/admin` and `/portal` are protected server-side by middleware and database RLS.
 
@@ -111,7 +112,7 @@ The app uses one Supabase magic-link mechanism for both team and client users. T
 - `/`: public SaaS landing page
 - `/register`: agency owner registration
 - `/register/complete`: magic-link completion for new agencies
-- `/login`: shared team/client magic-link sign-in
+- `/login`: neutral magic-link sign-in for existing agency members and clients
 - `/admin`: organization-scoped team panel
 - `/portal`: explicit client membership portal
 - `/dev-entry`: internal testing shortcuts

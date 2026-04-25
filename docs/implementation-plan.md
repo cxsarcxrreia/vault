@@ -7,7 +7,7 @@ This repo is a single SaaS-ready Next.js App Router application. It uses route g
 - `app/page.tsx` contains the public SaaS landing page.
 - `app/register` contains agency owner registration and completion.
 - `app/dev-entry` contains internal route shortcuts for local testing.
-- `app/(auth)` contains magic-link authentication routes.
+- `app/(auth)` contains the single neutral magic-link sign-in route for existing team and client users.
 - `app/(team)/admin` contains the internal team shell.
 - `app/(client)/portal` contains the client portal shell.
 - `components` contains reusable UI and layout primitives.
@@ -74,6 +74,7 @@ The app uses one Supabase project for many agencies. Agency-owned tables carry o
 - Invite/allowlist based magic-link gate that prevents unknown email auto-signup.
 - Server-side route protection based on resolved database role and client membership.
 - SaaS public home page, `/register` agency signup, and `/register/complete` magic-link onboarding.
+- Neutral `/login` entry that routes by database membership after magic-link authentication instead of asking users to choose team or client up front.
 - `organization_members` as the durable team membership model, with `profiles.organization_id` and `profiles.team_role` retained as compatibility mirrors.
 - Organization-scoped child rows for phases, deliverables, deliverable comments, approvals, documents, responsibilities, client memberships, and notification events.
 - Paladar represented as the first organization (`paladar`) with `rangercardeal@gmail.com` seeded as the owner invitation/bootstrap candidate.
@@ -131,6 +132,7 @@ The app keeps a single Supabase magic-link auth mechanism. Before a link is sent
 - Post-login routing resolves the user's profile and membership instead of trusting raw email or requested path.
 - Middleware protects `/admin` with organization membership checks and `/portal` with team-preview or client-membership checks.
 - New agencies register through `/register`; completion creates the organization, profile, owner membership, and default organization templates after magic-link authentication.
+- Existing agency members and clients both enter through `/login`; the app sends team users to `/admin` and client users to `/portal`.
 
 ## Open Questions
 

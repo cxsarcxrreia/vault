@@ -9,13 +9,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const loginSchema = z.object({
   email: z.string().email(),
-  next: z.string().default("/portal")
+  next: z.string().default("/")
 });
 
 export async function sendMagicLink(formData: FormData) {
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
-    next: formData.get("next") || "/portal"
+    next: formData.get("next") || "/"
   });
 
   if (!parsed.success) {
@@ -55,7 +55,7 @@ export async function sendMagicLink(formData: FormData) {
 export async function createDevSignInLink(formData: FormData) {
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
-    next: formData.get("next") || "/admin/bootstrap"
+    next: formData.get("next") || "/"
   });
 
   if (!parsed.success) {
