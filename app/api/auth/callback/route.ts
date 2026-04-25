@@ -1,15 +1,26 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { hasTeamOwner, isBootstrapEmailAllowed, resolvePostLoginPath } from "@/features/auth/access";
+import { getCanonicalAppUrl } from "@/lib/app-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+function safeRelativePath(path: string | null, fallback = "/portal") {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) {
+    return fallback;
+  }
+
+  return path;
+}
+
 export async function GET(request: NextRequest) {
+  const appUrl = getCanonicalAppUrl();
   const requestUrl = new URL(request.url);
+
   const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next") ?? "/portal";
+  const next = safeRelativePath(requestUrl.searchParams.get("next"), "/portal");
   const authError = requestUrl.searchParams.get("error_code") ?? requestUrl.searchParams.get("error");
 
   if (authError) {
-    const loginUrl = new URL("/login", requestUrl.origin);
+    const loginUrl = new URL("/login", appUrl);
     loginUrl.searchParams.set("error", authError);
     loginUrl.searchParams.set("next", next);
     return NextResponse.redirect(loginUrl);
@@ -23,8 +34,13 @@ export async function GET(request: NextRequest) {
       data: { user }
     } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
 
-    if (user?.email && next.startsWith("/admin/bootstrap") && !(await hasTeamOwner()) && isBootstrapEmailAllowed(user.email)) {
-      return NextResponse.redirect(new URL("/admin/bootstrap", requestUrl.origin));
+    if (
+      user?.email &&
+      next.startsWith("/admin/bootstrap") &&
+      !(await hasTeamOwner()) &&
+      isBootstrapEmailAllowed(user.email)
+    ) {
+      return NextResponse.redirect(new URL("/admin/bootstrap", appUrl));
     }
 
     const { data: profile } = user
@@ -35,9 +51,10 @@ export async function GET(request: NextRequest) {
           .maybeSingle()
       : { data: null };
 
-    const resolvedNext = await resolvePostLoginPath(next, profile);
-    return NextResponse.redirect(new URL(resolvedNext, requestUrl.origin));
+    const resolvedNext = safeRelativePath(await resolvePostLoginPath(next, profile), "/portal");
+
+    return NextResponse.redirect(new URL(resolvedNext, appUrl));
   }
 
-  return NextResponse.redirect(new URL(next, requestUrl.origin));
+  return NextResponse.redirect(new URL(next, appUrl));
 }
