@@ -2,9 +2,11 @@
 
 ## Architecture Summary
 
-This repo is a single Next.js App Router application. It uses route groups to separate public, auth, team, and client areas while sharing one domain model and one reusable component system.
+This repo is a single SaaS-ready Next.js App Router application. It uses route groups to separate public, auth, team, and client areas while sharing one organization-scoped domain model and one reusable component system.
 
-- `app/(marketing)` contains the public placeholder entry.
+- `app/page.tsx` contains the public SaaS landing page.
+- `app/register` contains agency owner registration and completion.
+- `app/dev-entry` contains internal route shortcuts for local testing.
 - `app/(auth)` contains magic-link authentication routes.
 - `app/(team)/admin` contains the internal team shell.
 - `app/(client)/portal` contains the client portal shell.
@@ -13,7 +15,9 @@ This repo is a single Next.js App Router application. It uses route groups to se
 - `lib/supabase` contains SSR, browser, and middleware Supabase clients.
 - `supabase` contains local CLI config, migrations, and seed data.
 
-Supabase is the persistence and auth layer. The schema starts with RLS enabled and models team users, client users, clients, templates, draft and activated projects, macro phases, deliverables, comments, approvals, documents, responsibility rows, and notification events.
+Supabase is the persistence and auth layer. The schema starts with RLS enabled and models organizations, organization memberships, profiles, client users, clients, templates, draft and activated projects, macro phases, deliverables, comments, approvals, documents, responsibility rows, and notification events.
+
+The app uses one Supabase project for many agencies. Agency-owned tables carry or inherit `organization_id`, and RLS resolves team access through `organization_members` plus explicit client access through `client_users`.
 
 ## Phases
 
@@ -69,6 +73,10 @@ Supabase is the persistence and auth layer. The schema starts with RLS enabled a
 - First team-owner bootstrap route at `/admin/bootstrap`.
 - Invite/allowlist based magic-link gate that prevents unknown email auto-signup.
 - Server-side route protection based on resolved database role and client membership.
+- SaaS public home page, `/register` agency signup, and `/register/complete` magic-link onboarding.
+- `organization_members` as the durable team membership model, with `profiles.organization_id` and `profiles.team_role` retained as compatibility mirrors.
+- Organization-scoped child rows for phases, deliverables, deliverable comments, approvals, documents, responsibilities, client memberships, and notification events.
+- Paladar represented as the first organization (`paladar`) with `rangercardeal@gmail.com` seeded as the owner invitation/bootstrap candidate.
 - Draft project creation, deal status, payment confirmation, and activation controls.
 - Main project state controls for draft, active, paused, and archived projects, including archive reasons.
 - Template default macro phases now populate new draft project timelines.
@@ -89,6 +97,7 @@ Supabase is the persistence and auth layer. The schema starts with RLS enabled a
 - Proposal token approval page.
 - Email provider integration for notification events.
 - Granular role management UI.
+- Billing plan UI, Stripe checkout, Stripe webhooks, and subscription/paywall enforcement.
 - Document edit/delete controls.
 - Template editing UI for custom deliverable suggestions and responsibility presets.
 
@@ -103,7 +112,7 @@ The app expects:
 - `SUPABASE_PROJECT_REF` for CLI convenience
 - `ADMIN_BOOTSTRAP_EMAILS` for first-owner production bootstrap
 
-The hosted project is linked and reachable with the configured URL/key pair. The committed migrations have been pushed, and global MVP templates are seeded through a migration. Regenerate linked types with:
+The hosted project is linked and reachable with the configured URL/key pair. Apply committed migrations with `npx supabase db push`, then regenerate linked types with:
 
 ```bash
 npm run supabase:types
@@ -116,11 +125,12 @@ Run `npm run supabase:check` after schema changes to verify the hosted project w
 The app keeps a single Supabase magic-link auth mechanism. Before a link is sent, server actions resolve the email against the database:
 
 - First owner: allowed only while no team owner exists and the email is in `ADMIN_BOOTSTRAP_EMAILS` in production.
-- Team users: allowed only through a completed team profile or pending team invitation.
+- Team users: allowed only through an active `organization_members` row or pending team invitation.
 - Client users: allowed only through explicit `client_users` membership or a pending client invitation.
 - Unknown users: denied before Supabase OTP is called; OTP uses `shouldCreateUser: false`.
 - Post-login routing resolves the user's profile and membership instead of trusting raw email or requested path.
-- Middleware protects `/admin` with team profile checks and `/portal` with team-preview or client-membership checks.
+- Middleware protects `/admin` with organization membership checks and `/portal` with team-preview or client-membership checks.
+- New agencies register through `/register`; completion creates the organization, profile, owner membership, and default organization templates after magic-link authentication.
 
 ## Open Questions
 

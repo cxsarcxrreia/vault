@@ -40,7 +40,9 @@ If secrets were ever committed to `.env.example`, rotate the anon and service ro
 ## Schema Notes
 
 - RLS is enabled on all app tables.
-- Team users can manage records in their organization.
-- Client users can read only their own activated projects.
+- One Supabase project serves many agencies through `organizations`.
+- Team users manage records through active `organization_members` rows.
+- Client users can read only their own activated projects through organization-scoped `client_users` rows.
+- Paladar is seeded as the first organization, with `rangercardeal@gmail.com` as the owner invitation/bootstrap candidate.
 - Deliverable revision and approval state lives on deliverables and related comment/approval tables.
 - Documents store metadata and external links, not heavy uploaded assets.

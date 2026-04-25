@@ -43,6 +43,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/bootstrap", appUrl));
     }
 
+    if (user?.email && next.startsWith("/register/complete")) {
+      return NextResponse.redirect(new URL("/register/complete", appUrl));
+    }
+
     const { data: profile } = user
       ? await supabase!
           .from("profiles")

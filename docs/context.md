@@ -6,11 +6,13 @@ Creative Agency Client Portal
 
 ## Product Summary
 
-This project is a web application for a creative agency to manage the operational relationship with clients through a simple, premium, minimal portal.
+This project is a SaaS-ready web application for creative and marketing agencies to manage the operational relationship with clients through a simple, premium, minimal portal.
 
 The app centralizes client visibility, macro timeline status, deliverables, approvals, lightweight revision handling, key documents, and responsibility ownership between the agency and the client.
 
 This is not a generic ERP, not a chat platform, and not a heavy file hosting system.
+
+The product runs as one shared application backed by one Supabase project. Many agencies live inside the same database as separate organizations, and every agency-owned record must be isolated by organization membership and RLS.
 
 ## Product Goal
 
@@ -40,7 +42,7 @@ Create a minimal but robust portal where a client can always understand:
 
 ### Team Users
 
-Internal agency users create draft projects, manage activation, configure deliverables, add documents, assign responsibilities, and trigger notification events.
+Internal agency users belong to an organization and create draft projects, manage activation, configure deliverables, add documents, assign responsibilities, and trigger notification events inside that organization.
 
 Team roles:
 
@@ -60,6 +62,15 @@ Client roles:
 Client users can only access their own activated projects.
 
 ## Product Split
+
+### Public SaaS Layer
+
+The public layer supports:
+
+- minimal product landing page
+- agency owner registration
+- magic-link completion for creating the first organization owner
+- sign-in routing into the correct member area
 
 ### Team Panel
 
@@ -213,6 +224,16 @@ Use:
 - Zod for validation
 - React Hook Form where forms become non-trivial
 - Lucide React for icons
+
+## Multi-Tenant Direction
+
+- Use one Render web service and one Supabase project for all agencies.
+- Keep agencies in `organizations`.
+- Resolve team access through `organization_members`, not email alone.
+- Keep client access explicit through `client_users`.
+- Scope clients, projects, templates, phases, deliverables, documents, responsibilities, comments, approvals, and notification events to an organization.
+- Preserve Paladar as the first real agency instance, with `rangercardeal@gmail.com` as the owner/admin candidate.
+- Keep Stripe and payment enforcement out of the MVP until billing is explicitly planned.
 
 ## Future Agent Rules
 

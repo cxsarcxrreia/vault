@@ -4,6 +4,10 @@
 
 Next.js App Router routes. Route groups separate public, auth, team, and client areas without changing URLs.
 
+- `app/page.tsx`: public SaaS landing page.
+- `app/register`: agency registration and post-magic-link completion.
+- `app/dev-entry`: internal testing shortcuts formerly shown on the home page.
+
 Do not put domain-heavy business logic here. Pages should compose feature modules, layout components, and server actions.
 
 ## `components`

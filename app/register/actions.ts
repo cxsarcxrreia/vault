@@ -1,0 +1,96 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { ensureAuthUser } from "@/features/auth/access";
+import { buildAuthCallbackUrl } from "@/lib/app-url";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+const registrationSchema = z.object({
+  agencyName: z.string().min(2).max(120),
+  ownerName: z.string().max(120).optional(),
+  ownerEmail: z.string().email()
+});
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+export async function startAgencyRegistration(formData: FormData) {
+  const parsed = registrationSchema.safeParse({
+    agencyName: formData.get("agencyName"),
+    ownerName: formData.get("ownerName") || undefined,
+    ownerEmail: formData.get("ownerEmail")
+  });
+
+  if (!parsed.success) {
+    redirect("/register?error=invalid-registration");
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  if (!supabase) {
+    redirect("/register?status=env-missing");
+  }
+
+  const service = createSupabaseServiceRoleClient() as any;
+  const ownerEmail = normalizeEmail(parsed.data.ownerEmail);
+  const existingUserId = await ensureAuthUser(ownerEmail);
+
+  const { count: membershipCount, error: membershipError } = await service
+    .from("organization_members")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", existingUserId)
+    .eq("status", "active");
+
+  if (membershipError && !["42P01", "PGRST200", "PGRST205"].includes(membershipError.code)) {
+    redirect(`/register?error=${encodeURIComponent(membershipError.message)}`);
+  }
+
+  if ((membershipCount ?? 0) > 0) {
+    redirect("/register?error=email-already-has-agency");
+  }
+
+  const { count: updatedCount, error: updateError } = await service
+    .from("agency_registrations")
+    .update({
+      agency_name: parsed.data.agencyName,
+      owner_name: parsed.data.ownerName || null,
+      owner_email: ownerEmail
+    }, { count: "exact" })
+    .eq("owner_email_normalized", ownerEmail)
+    .eq("status", "pending");
+
+  if (updateError && !["42P01", "PGRST200", "PGRST205"].includes(updateError.code)) {
+    redirect(`/register?error=${encodeURIComponent(updateError.message)}`);
+  }
+
+  if ((updatedCount ?? 0) === 0) {
+    const { error: insertError } = await service.from("agency_registrations").insert({
+      agency_name: parsed.data.agencyName,
+      owner_name: parsed.data.ownerName || null,
+      owner_email: ownerEmail,
+      status: "pending"
+    });
+
+    if (insertError) {
+      redirect(`/register?error=${encodeURIComponent(insertError.message)}`);
+    }
+  }
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email: ownerEmail,
+    options: {
+      emailRedirectTo: buildAuthCallbackUrl("/register/complete"),
+      shouldCreateUser: false
+    }
+  });
+
+  if (error) {
+    const code = error.code ?? error.status?.toString() ?? "magic-link";
+    redirect(`/register?error=${encodeURIComponent(code)}`);
+  }
+
+  redirect("/register?status=check-email");
+}

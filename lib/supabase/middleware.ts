@@ -41,13 +41,13 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && request.nextUrl.pathname.startsWith("/admin") && !request.nextUrl.pathname.startsWith("/admin/bootstrap")) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("user_type,team_role,organization_id")
-      .eq("id", user.id)
-      .maybeSingle();
+    const { count } = await (supabase as any)
+      .from("organization_members")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", user.id)
+      .eq("status", "active");
 
-    if (!profile || profile.user_type !== "team" || !profile.team_role || !profile.organization_id) {
+    if ((count ?? 0) === 0) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = "/login";
       loginUrl.search = "";
@@ -65,7 +65,15 @@ export async function updateSession(request: NextRequest) {
       .maybeSingle();
 
     if (profile?.user_type === "team" && profile.team_role && profile.organization_id) {
-      return response;
+      const { count } = await (supabase as any)
+        .from("organization_members")
+        .select("id", { count: "exact", head: true })
+        .eq("profile_id", user.id)
+        .eq("status", "active");
+
+      if ((count ?? 0) > 0) {
+        return response;
+      }
     }
 
     if (profile?.user_type === "client") {

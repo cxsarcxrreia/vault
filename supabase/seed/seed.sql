@@ -1,5 +1,5 @@
 insert into public.organizations (id, name, slug)
-values ('00000000-0000-0000-0000-000000000001', 'Demo Agency', 'demo-agency')
+values ('00000000-0000-0000-0000-000000000001', 'Paladar', 'paladar')
 on conflict (id) do update set name = excluded.name, slug = excluded.slug;
 
 insert into public.project_templates (

@@ -1,4 +1,5 @@
 import { Mail } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
@@ -99,6 +100,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           ) : error ? (
             <p className="mt-4 text-sm text-red-700">Unable to complete sign-in. Error: {error}</p>
           ) : null}
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            New agency?{" "}
+            <Link href="/register" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Create an agency
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </main>

@@ -143,11 +143,32 @@ async function getTeamContext() {
     redirect(`/admin?error=${encodeURIComponent("Unable to load your profile. Has the schema been applied?")}`);
   }
 
-  if (!profile || profile.user_type !== "team" || !profile.organization_id) {
-    redirect(`/admin?error=${encodeURIComponent("Your user needs a team profile with an organization before managing projects.")}`);
+  const { data: membership, error: membershipError } = await (supabase as any)
+    .from("organization_members")
+    .select("organization_id,role,status")
+    .eq("profile_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (membershipError) {
+    redirect(`/admin?error=${encodeURIComponent("Unable to load your organization access.")}`);
   }
 
-  return { supabase, user, profile };
+  if (!profile || profile.user_type !== "team" || !membership?.organization_id) {
+    redirect(`/admin?error=${encodeURIComponent("Your user needs a team membership before managing projects.")}`);
+  }
+
+  return {
+    supabase,
+    user,
+    profile: {
+      ...profile,
+      organization_id: membership.organization_id,
+      team_role: membership.role
+    }
+  };
 }
 
 async function getProjectOrganization(projectId: string) {

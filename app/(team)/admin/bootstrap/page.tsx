@@ -20,11 +20,11 @@ export default async function BootstrapPage({ searchParams }: BootstrapPageProps
   } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
 
   const service = createSupabaseServiceRoleClient();
-  const { count } = await service
-    .from("profiles")
+  const { count } = await (service as any)
+    .from("organization_members")
     .select("id", { count: "exact", head: true })
-    .eq("user_type", "team")
-    .eq("team_role", "owner");
+    .eq("role", "owner")
+    .eq("status", "active");
 
   const ownerExists = (count ?? 0) > 0;
   const bootstrapEmailAllowed = Boolean(user?.email && isBootstrapEmailAllowed(user.email));
@@ -33,8 +33,8 @@ export default async function BootstrapPage({ searchParams }: BootstrapPageProps
     <>
       <PageHeader
         eyebrow="Setup"
-        title="Claim first team owner"
-        description="Use this once after the first magic-link sign-in to create the initial agency workspace owner."
+        title="Claim Paladar owner"
+        description="Use this once after the first magic-link sign-in to create the initial Paladar workspace owner."
       />
       <div className="p-6">
         <Card className="max-w-xl">

@@ -1,8 +1,10 @@
 # Creative Agency Client Portal
 
-A minimal MVP foundation for a creative agency client portal built with Next.js App Router, TypeScript, Tailwind CSS, and Supabase.
+A minimal SaaS-ready MVP foundation for creative agency client portals built with Next.js App Router, TypeScript, Tailwind CSS, and Supabase.
 
-The product focuses on team-controlled project activation, macro project visibility, deliverables, lightweight revisions, documents, responsibilities, and client magic-link login. It intentionally does not include chat, billing, heavy file hosting, or advanced ERP features.
+The product focuses on team-controlled project activation, macro project visibility, deliverables, lightweight revisions, documents, responsibilities, agency registration, and magic-link login. It intentionally does not include chat, billing, heavy file hosting, or advanced ERP features.
+
+The deployment model is one web service and one Supabase project serving many agencies through organization-scoped data and RLS. It does not create one Supabase project per agency.
 
 ## Stack
 
@@ -85,7 +87,11 @@ Then replace local environment values with hosted project values in your deploym
 
 If the CLI reports that no access token is provided, run `npx supabase login` or set `SUPABASE_ACCESS_TOKEN` before hosted `db push` or type generation.
 
-After an allowlisted first team user signs in, open `/admin/bootstrap` and claim first owner access. This creates the initial agency workspace owner and then locks itself once an owner exists.
+Paladar is the first local/real agency instance. The committed migration ensures an organization with slug `paladar` exists and seeds `rangercardeal@gmail.com` as a pending owner invitation. After that email signs in, it receives owner/admin access through database membership.
+
+If needed, an allowlisted first Paladar user can still open `/admin/bootstrap` and claim owner access. This route creates the Paladar owner membership and locks itself once an owner exists.
+
+New agencies should use `/register`. The owner enters agency name, owner name, and owner email, receives a Supabase magic link, and the app creates the organization, profile, owner membership, and default templates after authentication.
 
 In Supabase Authentication URL Configuration, set the Site URL to your deployed app origin and add the callback URL for your deployment, for example `https://vault-fosv.onrender.com/api/auth/callback`. Keep local development entries such as `http://localhost:3000/api/auth/callback` only if you still use them.
 
@@ -95,10 +101,20 @@ The app uses one Supabase magic-link mechanism for both team and client users. T
 
 - Unknown emails are denied and are not auto-created by OTP.
 - First owner bootstrap is allowed only while no owner exists and the email is in `ADMIN_BOOTSTRAP_EMAILS` in production.
-- Team access requires a `profiles` row with `user_type = team`, a `team_role`, and an `organization_id`.
-- Client access requires a `profiles` row with `user_type = client` plus an explicit `client_users` membership.
+- Team access requires an active `organization_members` row. `profiles.organization_id` and `profiles.team_role` remain as compatibility mirrors.
+- Client access requires a `profiles` row with `user_type = client` plus an explicit organization-scoped `client_users` membership.
 - Project activation creates or updates the primary client contact auth user/profile and `client_users` membership.
 - `/admin` and `/portal` are protected server-side by middleware and database RLS.
+
+## Routes
+
+- `/`: public SaaS landing page
+- `/register`: agency owner registration
+- `/register/complete`: magic-link completion for new agencies
+- `/login`: shared team/client magic-link sign-in
+- `/admin`: organization-scoped team panel
+- `/portal`: explicit client membership portal
+- `/dev-entry`: internal testing shortcuts
 
 ## Scripts
 
@@ -132,4 +148,4 @@ npm.cmd run build:webpack
 
 ## Current Status
 
-This repo is an MVP foundation. It now includes route shells, generated Supabase database types, typed domain models, Supabase schema/config, seed data migrations, auth helpers, neutral UI primitives, first-owner bootstrap, draft project creation, payment confirmation, activation controls, pause/archive project state controls, deliverable creation, client deliverable approval, atomic revision requests, admin resubmission, and admin approval on behalf of clients.
+This repo is an MVP foundation. It now includes public agency registration, route shells, generated Supabase database types, typed domain models, Supabase schema/config, seed data migrations, organization membership access, auth helpers, neutral UI primitives, first-owner bootstrap, draft project creation, payment confirmation, activation controls, pause/archive project state controls, deliverable creation, client deliverable approval, atomic revision requests, admin resubmission, and admin approval on behalf of clients.
