@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { ensureAuthUser } from "@/features/auth/access";
+import { ensureAuthUser, findAuthUserIdByEmail } from "@/features/auth/access";
 import { buildAuthCallbackUrl, getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -40,20 +40,22 @@ async function prepareAgencyRegistration(formData: FormData) {
 
   const service = createSupabaseServiceRoleClient() as any;
   const ownerEmail = normalizeEmail(parsed.data.ownerEmail);
-  const existingUserId = await ensureAuthUser(ownerEmail);
+  const existingUserId = await findAuthUserIdByEmail(ownerEmail);
 
-  const { count: membershipCount, error: membershipError } = await service
-    .from("organization_members")
-    .select("id", { count: "exact", head: true })
-    .eq("profile_id", existingUserId)
-    .eq("status", "active");
+  if (existingUserId) {
+    const { count: membershipCount, error: membershipError } = await service
+      .from("organization_members")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", existingUserId)
+      .eq("status", "active");
 
-  if (membershipError && !["42P01", "PGRST200", "PGRST205"].includes(membershipError.code)) {
-    redirect(`/register?error=${encodeURIComponent(membershipError.message)}`);
-  }
+    if (membershipError && !["42P01", "PGRST200", "PGRST205"].includes(membershipError.code)) {
+      redirect(`/register?error=${encodeURIComponent(membershipError.message)}`);
+    }
 
-  if ((membershipCount ?? 0) > 0) {
-    redirect("/register?error=email-already-has-agency");
+    if ((membershipCount ?? 0) > 0) {
+      redirect("/register?error=email-already-has-agency");
+    }
   }
 
   const { count: updatedCount, error: updateError } = await service
@@ -99,7 +101,7 @@ export async function startAgencyRegistration(formData: FormData) {
     email: ownerEmail,
     options: {
       emailRedirectTo: buildAuthCallbackUrl("/register/complete"),
-      shouldCreateUser: false
+      shouldCreateUser: true
     }
   });
 
@@ -121,6 +123,7 @@ export async function createDevAgencyRegistrationLink(formData: FormData) {
 
   const service = createSupabaseServiceRoleClient();
   const { ownerEmail } = await prepareAgencyRegistration(formData);
+  await ensureAuthUser(ownerEmail);
   const redirectTo = buildAuthCallbackUrl("/register/complete");
   const { data, error } = await service.auth.admin.generateLink({
     type: "magiclink",

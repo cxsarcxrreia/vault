@@ -141,7 +141,7 @@ async function getPendingInvitation(email: string): Promise<AccessInvitation | n
   return data ?? null;
 }
 
-async function findAuthUserIdByEmail(email: string) {
+export async function findAuthUserIdByEmail(email: string) {
   const service = createSupabaseServiceRoleClient();
   const normalized = normalizeEmail(email);
   let page = 1;
