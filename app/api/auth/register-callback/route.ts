@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { completeAgencyRegistration } from "@/features/auth/registration";
-import { getCanonicalAppUrl } from "@/lib/app-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
-  const appUrl = getCanonicalAppUrl();
   const requestUrl = new URL(request.url);
+  const appUrl = requestUrl.origin;
   const code = requestUrl.searchParams.get("code");
   const authError = requestUrl.searchParams.get("error_code") ?? requestUrl.searchParams.get("error");
 
