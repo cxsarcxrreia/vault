@@ -55,3 +55,17 @@ export function buildAuthCallbackUrl(next = DEFAULT_POST_LOGIN_PATH) {
 export function buildAgencyRegistrationCallbackUrl() {
   return new URL("/api/auth/register-callback", getCanonicalAppUrl()).toString();
 }
+
+export function buildSignInCallbackUrl(next = DEFAULT_POST_LOGIN_PATH) {
+  const normalizedNext = normalizeRelativePath(next);
+
+  if (normalizedNext.startsWith("/admin") && !normalizedNext.startsWith("/admin/bootstrap")) {
+    return new URL("/api/auth/admin-callback", getCanonicalAppUrl()).toString();
+  }
+
+  if (normalizedNext.startsWith("/portal")) {
+    return new URL("/api/auth/portal-callback", getCanonicalAppUrl()).toString();
+  }
+
+  return buildAuthCallbackUrl(normalizedNext);
+}

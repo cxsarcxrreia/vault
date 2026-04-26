@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { resolveLoginAccess } from "@/features/auth/access";
-import { buildAuthCallbackUrl, getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
+import { buildSignInCallbackUrl, getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -34,7 +34,7 @@ export async function sendMagicLink(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(access.reason ?? "access-not-enabled")}`);
   }
 
-  const redirectTo = buildAuthCallbackUrl(access.next);
+  const redirectTo = buildSignInCallbackUrl(access.next);
 
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
@@ -76,7 +76,7 @@ export async function createDevSignInLink(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(access.reason ?? "access-not-enabled")}`);
   }
 
-  const redirectTo = buildAuthCallbackUrl(access.next);
+  const redirectTo = buildSignInCallbackUrl(access.next);
 
   const firstAttempt = await service.auth.admin.generateLink({
     type: "magiclink",
