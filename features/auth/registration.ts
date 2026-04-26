@@ -84,6 +84,14 @@ export async function completeAgencyRegistrationForUser(input: {
   email: string;
   fullName?: string | null;
 }) {
+  redirect(await completeAgencyRegistration(input));
+}
+
+export async function completeAgencyRegistration(input: {
+  userId: string;
+  email: string;
+  fullName?: string | null;
+}) {
   const service = createSupabaseServiceRoleClient() as any;
   const email = normalizeEmail(input.email);
 
@@ -101,7 +109,7 @@ export async function completeAgencyRegistrationForUser(input: {
       .eq("status", "active");
 
     if ((count ?? 0) > 0) {
-      redirect("/admin");
+      return "/admin";
     }
   }
 
@@ -115,11 +123,11 @@ export async function completeAgencyRegistrationForUser(input: {
     .maybeSingle();
 
   if (registrationError) {
-    redirect(`/register?error=${encodeURIComponent(registrationError.message)}`);
+    return `/register?error=${encodeURIComponent(registrationError.message)}`;
   }
 
   if (!registration) {
-    redirect("/register?error=registration-not-found");
+    return "/register?error=registration-not-found";
   }
 
   const slug = await getUniqueOrganizationSlug(service, registration.agency_name);
@@ -135,7 +143,7 @@ export async function completeAgencyRegistrationForUser(input: {
     .single();
 
   if (organizationError || !organization) {
-    redirect(`/register?error=${encodeURIComponent(organizationError?.message ?? "Unable to create agency.")}`);
+    return `/register?error=${encodeURIComponent(organizationError?.message ?? "Unable to create agency.")}`;
   }
 
   await upsertProfile({
@@ -157,7 +165,7 @@ export async function completeAgencyRegistrationForUser(input: {
     await copyGlobalTemplates(service, organization.id);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to copy default templates.";
-    redirect(`/register?error=${encodeURIComponent(message)}`);
+    return `/register?error=${encodeURIComponent(message)}`;
   }
 
   await service
@@ -170,5 +178,5 @@ export async function completeAgencyRegistrationForUser(input: {
     })
     .eq("id", registration.id);
 
-  redirect("/admin?registered=1");
+  return "/admin?registered=1";
 }

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ensureAuthUser, findAuthUserIdByEmail } from "@/features/auth/access";
-import { buildAuthCallbackUrl, getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
+import { buildAgencyRegistrationCallbackUrl, getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -96,12 +96,13 @@ export async function startAgencyRegistration(formData: FormData) {
   }
 
   const { ownerEmail } = await prepareAgencyRegistration(formData);
+  await ensureAuthUser(ownerEmail);
 
   const { error } = await supabase.auth.signInWithOtp({
     email: ownerEmail,
     options: {
-      emailRedirectTo: buildAuthCallbackUrl("/register/complete"),
-      shouldCreateUser: true
+      emailRedirectTo: buildAgencyRegistrationCallbackUrl(),
+      shouldCreateUser: false
     }
   });
 
@@ -124,7 +125,7 @@ export async function createDevAgencyRegistrationLink(formData: FormData) {
   const service = createSupabaseServiceRoleClient();
   const { ownerEmail } = await prepareAgencyRegistration(formData);
   await ensureAuthUser(ownerEmail);
-  const redirectTo = buildAuthCallbackUrl("/register/complete");
+  const redirectTo = buildAgencyRegistrationCallbackUrl();
   const { data, error } = await service.auth.admin.generateLink({
     type: "magiclink",
     email: ownerEmail,
@@ -191,7 +192,7 @@ export async function createDevPendingRegistrationLink(formData: FormData) {
     redirect("/register?error=email-already-has-agency");
   }
 
-  const redirectTo = buildAuthCallbackUrl("/register/complete");
+  const redirectTo = buildAgencyRegistrationCallbackUrl();
   const { data, error } = await service.auth.admin.generateLink({
     type: "magiclink",
     email: ownerEmail,

@@ -51,3 +51,7 @@ export function buildAuthCallbackUrl(next = DEFAULT_POST_LOGIN_PATH) {
 
   return callbackUrl.toString();
 }
+
+export function buildAgencyRegistrationCallbackUrl() {
+  return new URL("/api/auth/register-callback", getCanonicalAppUrl()).toString();
+}
