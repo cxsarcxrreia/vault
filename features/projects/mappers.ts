@@ -91,6 +91,7 @@ export function mapProject(
 
   return {
     id: row.id,
+    organizationId: row.organization_id,
     name: row.name,
     clientName: client?.name ?? "Client",
     clientEmail: client?.primary_contact_email,

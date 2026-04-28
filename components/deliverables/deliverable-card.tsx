@@ -46,6 +46,13 @@ const statusOptions: DeliverableStatus[] = [
   "revision_requested",
 ];
 
+const lockedManualStatusStates = new Set<DeliverableStatus>([
+  "ready_for_review",
+  "revision_requested",
+  "approved",
+  "delivered"
+]);
+
 function DeliverableStatusBadge({
   deliverable,
   projectId,
@@ -57,7 +64,7 @@ function DeliverableStatusBadge({
   mode: "admin" | "client" | "readonly";
   label: string;
 }) {
-  if (mode !== "admin" || !projectId) {
+  if (mode !== "admin" || !projectId || lockedManualStatusStates.has(deliverable.status)) {
     return <Badge tone={statusTone[deliverable.status]}>{label}</Badge>;
   }
 

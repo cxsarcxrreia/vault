@@ -25,7 +25,8 @@ function readRecentProjects(storageKey: string) {
 
 function RecentProjectTracker({
   project,
-  storageKey
+  storageKey,
+  scopeKey
 }: {
   project: {
     id: string;
@@ -33,9 +34,11 @@ function RecentProjectTracker({
     state: string;
   };
   storageKey: string;
+  scopeKey?: string;
 }) {
   useEffect(() => {
-    const recentProjects = readRecentProjects(storageKey);
+    const scopedStorageKey = scopeKey ? `${storageKey}:${scopeKey}` : storageKey;
+    const recentProjects = readRecentProjects(scopedStorageKey);
     const nextProjects = [
       {
         ...project,
@@ -44,9 +47,9 @@ function RecentProjectTracker({
       ...recentProjects.filter((item) => item.id !== project.id)
     ].slice(0, 4);
 
-    window.localStorage.setItem(storageKey, JSON.stringify(nextProjects));
+    window.localStorage.setItem(scopedStorageKey, JSON.stringify(nextProjects));
     window.dispatchEvent(new Event(RECENT_PROJECTS_UPDATED_EVENT));
-  }, [project, storageKey]);
+  }, [project, scopeKey, storageKey]);
 
   return null;
 }
@@ -58,9 +61,16 @@ export function RecentAdminProjectTracker({
     id: string;
     name: string;
     state: string;
+    organizationId?: string | null;
   };
 }) {
-  return <RecentProjectTracker project={project} storageKey={RECENT_ADMIN_PROJECTS_STORAGE_KEY} />;
+  return (
+    <RecentProjectTracker
+      project={project}
+      storageKey={RECENT_ADMIN_PROJECTS_STORAGE_KEY}
+      scopeKey={project.organizationId ? `org:${project.organizationId}` : undefined}
+    />
+  );
 }
 
 export function RecentClientProjectTracker({

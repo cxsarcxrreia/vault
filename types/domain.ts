@@ -91,6 +91,7 @@ export type ProjectTemplate = {
 
 export type Project = {
   id: string;
+  organizationId?: string;
   name: string;
   clientName: string;
   clientEmail?: string;

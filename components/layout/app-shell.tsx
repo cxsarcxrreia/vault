@@ -43,18 +43,22 @@ function getProjectStateTone(state: string) {
   return "border-border bg-muted text-muted-foreground";
 }
 
-function getProjectNavConfig(href: string) {
+function scopedStorageKey(storageKey: string, scopeKey?: string) {
+  return scopeKey ? `${storageKey}:${scopeKey}` : storageKey;
+}
+
+function getProjectNavConfig(href: string, scopeKey?: string) {
   if (href === "/admin/projects") {
     return {
       hrefPrefix: "/admin/projects",
-      storageKey: RECENT_ADMIN_PROJECTS_STORAGE_KEY
+      storageKey: scopedStorageKey(RECENT_ADMIN_PROJECTS_STORAGE_KEY, scopeKey)
     };
   }
 
   if (href === "/portal") {
     return {
       hrefPrefix: "/portal/project",
-      storageKey: RECENT_CLIENT_PROJECTS_STORAGE_KEY
+      storageKey: scopedStorageKey(RECENT_CLIENT_PROJECTS_STORAGE_KEY, scopeKey)
     };
   }
 
@@ -162,7 +166,8 @@ function NavLink({
   onNavigate,
   isMobile = false,
   isMobileProjectsExpanded = false,
-  onMobileProjectsExpand
+  onMobileProjectsExpand,
+  recentProjectsScopeKey
 }: {
   item: NavItem;
   pathname: string;
@@ -170,9 +175,10 @@ function NavLink({
   isMobile?: boolean;
   isMobileProjectsExpanded?: boolean;
   onMobileProjectsExpand?: () => void;
+  recentProjectsScopeKey?: string;
 }) {
   const isActive = isNavItemActive(pathname, item.href);
-  const projectNavConfig = getProjectNavConfig(item.href);
+  const projectNavConfig = getProjectNavConfig(item.href, recentProjectsScopeKey);
   const isProjectsItem = Boolean(projectNavConfig);
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -214,12 +220,14 @@ export function AppShell({
   area,
   navItems,
   children,
-  brandLabel = "VAULT(TM)"
+  brandLabel = "VAULT(TM)",
+  recentProjectsScopeKey
 }: {
   area: string;
   navItems: NavItem[];
   children: React.ReactNode;
   brandLabel?: string;
+  recentProjectsScopeKey?: string;
 }) {
   const pathname = usePathname();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -238,7 +246,13 @@ export function AppShell({
         <p className="mt-1 text-xs text-muted-foreground">{area}</p>
         <nav className="mt-8 space-y-1">
           {navItems.map((item) => (
-            <NavLink key={item.href} item={item} pathname={pathname} onNavigate={closeMobileNav} />
+            <NavLink
+              key={item.href}
+              item={item}
+              pathname={pathname}
+              onNavigate={closeMobileNav}
+              recentProjectsScopeKey={recentProjectsScopeKey}
+            />
           ))}
         </nav>
         <form action={signOut} className="absolute bottom-5 left-4 right-4">
@@ -290,6 +304,7 @@ export function AppShell({
                     isMobile
                     isMobileProjectsExpanded={isMobileProjectsExpanded}
                     onMobileProjectsExpand={() => setIsMobileProjectsExpanded(true)}
+                    recentProjectsScopeKey={recentProjectsScopeKey}
                   />
                 ))}
               </div>

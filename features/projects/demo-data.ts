@@ -63,6 +63,7 @@ export const clients: Client[] = [
 export const projects: Project[] = [
   {
     id: "project-sample",
+    organizationId: "demo-paladar",
     name: "Spring Launch Content",
     clientName: "Northline Studio",
     summary: "A one-time production package for launch assets, review, and final delivery links.",

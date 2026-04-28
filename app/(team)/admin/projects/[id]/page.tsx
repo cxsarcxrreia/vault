@@ -91,7 +91,8 @@ export default async function AdminProjectPage({ params, searchParams }: Project
           project={{
             id: project.id,
             name: project.name,
-            state: getMainProjectState(project)
+            state: getMainProjectState(project),
+            organizationId: project.organizationId
           }}
         />
         <div id="project-summary" className="scroll-mt-6">
