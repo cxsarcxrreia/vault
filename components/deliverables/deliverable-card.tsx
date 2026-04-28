@@ -11,13 +11,13 @@ import {
   requestDeliverableRevision,
   resubmitDeliverable,
   undoDeliverableApproval,
-  updateDeliverableDeliveryState,
   updateDeliverableExpectedDeliveryDate,
-  updateDeliverableLink
+  updateDeliverableLink,
+  updateDeliverableStatus
 } from "@/features/projects/actions";
 import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/format";
-import type { Deliverable } from "@/types/domain";
+import type { Deliverable, DeliverableStatus } from "@/types/domain";
 
 const statusTone = {
   planned: "neutral",
@@ -39,6 +39,58 @@ const statusLabel = {
   delivered: "Delivered"
 } as const;
 
+const statusOptions: DeliverableStatus[] = [
+  "planned",
+  "in_progress",
+  "editing",
+  "revision_requested",
+];
+
+function DeliverableStatusBadge({
+  deliverable,
+  projectId,
+  mode,
+  label
+}: {
+  deliverable: Deliverable;
+  projectId?: string;
+  mode: "admin" | "client" | "readonly";
+  label: string;
+}) {
+  if (mode !== "admin" || !projectId) {
+    return <Badge tone={statusTone[deliverable.status]}>{label}</Badge>;
+  }
+
+  const otherStatuses = statusOptions.filter((status) => status !== deliverable.status);
+
+  return (
+    <details className="group relative">
+      <summary className="list-none marker:hidden">
+        <span className="inline-flex cursor-pointer items-center gap-1 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+          <Badge tone={statusTone[deliverable.status]}>{label}</Badge>
+          <ChevronDown className="size-3 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+        </span>
+      </summary>
+      <form action={updateDeliverableStatus} className="absolute right-0 top-full z-30 mt-2 w-52 rounded-md border bg-background p-1 shadow-lg">
+        <input type="hidden" name="projectId" value={projectId} />
+        <input type="hidden" name="deliverableId" value={deliverable.id} />
+        {otherStatuses.map((status) => (
+          <button
+            key={status}
+            type="submit"
+            name="status"
+            value={status}
+            className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <span>{statusLabel[status]}</span>
+            <span className={cn("size-2 rounded-full", statusTone[status] === "active" ? "bg-emerald-500" : statusTone[status] === "waiting" ? "bg-amber-500" : "bg-muted-foreground/40")} />
+          </button>
+        ))}
+      </form>
+    </details>
+  );
+}
+
 export function DeliverableCard({
   deliverable,
   projectId,
@@ -55,11 +107,6 @@ export function DeliverableCard({
   const isApproved = deliverable.status === "approved";
   const canRequestRevision = isReadyForClientReview && deliverable.revisionsRemaining > 0;
   const canApprove = isReadyForClientReview;
-  const canEditDeliveryState =
-    mode === "admin" &&
-    projectId &&
-    !deliverable.externalUrl &&
-    (["planned", "in_progress", "editing"] as const).includes(deliverable.status as "planned" | "in_progress" | "editing");
   const badgeLabel =
     mode === "client" && deliverable.status === "ready_for_review"
       ? "Awaiting your review"
@@ -73,7 +120,7 @@ export function DeliverableCard({
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{deliverable.type}</p>
             <h3 className="mt-1 font-semibold">{deliverable.title}</h3>
           </div>
-          <Badge tone={statusTone[deliverable.status]}>{badgeLabel}</Badge>
+          <DeliverableStatusBadge deliverable={deliverable} projectId={projectId} mode={mode} label={badgeLabel} />
         </div>
         <dl
           className={cn(
@@ -138,24 +185,6 @@ export function DeliverableCard({
                   className="h-10 min-w-0 rounded-md border bg-background px-3 text-sm"
                 />
                 <Button type="submit" variant="outline">Save link</Button>
-              </form>
-            </details>
-          ) : null}
-          {canEditDeliveryState ? (
-            <details className="group rounded-md open:border open:p-3">
-              <summary className="inline-flex h-10 cursor-pointer list-none items-center justify-center rounded-md border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted marker:hidden">
-                <Pencil className="mr-2 size-4" />
-                Update delivery state
-              </summary>
-              <form action={updateDeliverableDeliveryState} className="mt-3 grid w-full gap-2 rounded-md bg-background sm:grid-cols-[1fr_auto]">
-                <input type="hidden" name="projectId" value={projectId} />
-                <input type="hidden" name="deliverableId" value={deliverable.id} />
-                <select name="deliveryState" defaultValue={deliverable.status} className="h-10 rounded-md border bg-background px-3 text-sm">
-                  <option value="planned">Not started</option>
-                  <option value="in_progress">In production</option>
-                  <option value="editing">Editing</option>
-                </select>
-                <Button type="submit" variant="outline">Save state</Button>
               </form>
             </details>
           ) : null}

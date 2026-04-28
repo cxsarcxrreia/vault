@@ -25,13 +25,14 @@ type ProjectPageProps = {
 
 const sectionUpdates: Record<string, string[]> = {
   activation: ["deal-status", "payment-confirmed", "activated", "client-access-synced"],
-  timeline: ["timeline-started", "timeline-completed"],
+  timeline: ["timeline-started", "timeline-completed", "timeline-reset", "timeline-status-updated"],
   deliverables: [
     "deliverable-created",
     "deliverable-deleted",
     "deliverable-link-updated",
     "deliverable-date-updated",
     "deliverable-state-updated",
+    "deliverable-status-updated",
     "manual-revision-logged",
     "deliverable-resubmitted",
     "approved-on-behalf",

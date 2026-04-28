@@ -213,11 +213,13 @@ function NavLink({
 export function AppShell({
   area,
   navItems,
-  children
+  children,
+  brandLabel = "VAULT(TM)"
 }: {
   area: string;
   navItems: NavItem[];
   children: React.ReactNode;
+  brandLabel?: string;
 }) {
   const pathname = usePathname();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -231,7 +233,7 @@ export function AppShell({
     <div className="min-h-screen bg-background">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-card px-4 py-5 md:block">
         <Link href="/" className="block text-sm font-semibold">
-          VAULT(TM)
+          {brandLabel}
         </Link>
         <p className="mt-1 text-xs text-muted-foreground">{area}</p>
         <nav className="mt-8 space-y-1">
@@ -259,7 +261,7 @@ export function AppShell({
               {isMobileNavOpen ? <X className="size-4" aria-hidden="true" /> : <Menu className="size-4" aria-hidden="true" />}
             </button>
             <Link href="/" className="text-sm font-semibold">
-              VAULT(TM)
+              {brandLabel}
             </Link>
           </div>
           <div className="flex items-center gap-3">

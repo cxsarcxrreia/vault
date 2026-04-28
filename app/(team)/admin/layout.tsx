@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { getCurrentOrganizationName } from "@/features/projects/queries";
 
 const navItems = [
   { href: "/admin", label: "Overview" },
@@ -7,9 +8,12 @@ const navItems = [
   { href: "/admin/templates", label: "Templates" }
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const organizationName = await getCurrentOrganizationName();
+  const brandLabel = organizationName ? `${organizationName} | VAULT(TM)` : "VAULT(TM)";
+
   return (
-    <AppShell area="Team panel" navItems={navItems}>
+    <AppShell area="Team panel" navItems={navItems} brandLabel={brandLabel}>
       {children}
     </AppShell>
   );

@@ -68,6 +68,34 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   return data ?? null;
 }
 
+export async function getCurrentOrganizationName(): Promise<string | null> {
+  const supabase = await getClient();
+
+  if (!supabase) {
+    return "Paladar";
+  }
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data } = await supabase
+    .from("organization_members")
+    .select("organizations(name)")
+    .eq("profile_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const organization = Array.isArray(data?.organizations) ? data.organizations[0] : data?.organizations;
+  return organization?.name ?? null;
+}
+
 export async function getProjectTemplates(): Promise<DataState<ProjectTemplate[]>> {
   const supabase = await getClient();
 
