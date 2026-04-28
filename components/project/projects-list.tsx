@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
-import type { Project } from "@/types/domain";
+import type { Deliverable, Project } from "@/types/domain";
 
 type ProjectsListProps = {
   projects: Project[];
@@ -16,24 +16,256 @@ type ProjectsListProps = {
 };
 
 type StatusFilter = "all" | "active" | "paused" | "archived";
+type ProjectInsightTone = "neutral" | "active" | "warning" | "danger";
+type ProjectHealthTone = "active" | "warning" | "danger";
+
+const completedDeliverableStatuses = new Set<Deliverable["status"]>(["approved", "delivered"]);
+const dayInMs = 24 * 60 * 60 * 1000;
+
+function parseDate(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day);
+}
+
+function daysUntil(value: string | null) {
+  const date = parseDate(value);
+
+  if (!date) {
+    return null;
+  }
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  return Math.ceil((date.getTime() - today.getTime()) / dayInMs);
+}
+
+function formatShortDate(value: string | null) {
+  const date = parseDate(value);
+
+  if (!date) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date);
+}
+
+function formatDayCount(days: number) {
+  const absoluteDays = Math.abs(days);
+
+  return `${absoluteDays} ${absoluteDays === 1 ? "day" : "days"}`;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getTimelineProgress(project: Project) {
+  const startsOn = parseDate(project.startsOn);
+  const endsOn = parseDate(project.endsOn);
+
+  if (!startsOn || !endsOn || endsOn <= startsOn) {
+    return project.endsOn ? 0.5 : 0;
+  }
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  return clamp((today.getTime() - startsOn.getTime()) / (endsOn.getTime() - startsOn.getTime()), 0, 1);
+}
+
+function getProjectHealth(project: Project): { label: "Healthy" | "Needs attention" | "Not Healthy"; tone: ProjectHealthTone } {
+  const totalDeliverables = project.deliverables.length;
+  const pendingDeliverables = project.deliverables.filter((deliverable) => !completedDeliverableStatuses.has(deliverable.status));
+  const completedRatio = totalDeliverables ? (totalDeliverables - pendingDeliverables.length) / totalDeliverables : 0;
+  const timelineProgress = getTimelineProgress(project);
+  const progressGap = timelineProgress - completedRatio;
+  const projectDaysLeft = daysUntil(project.endsOn);
+  const overdueDeliverables = pendingDeliverables.filter((deliverable) => {
+    const deliverableDaysLeft = daysUntil(deliverable.expectedDeliveryDate);
+
+    return deliverableDaysLeft !== null && deliverableDaysLeft < 0;
+  }).length;
+  const dueSoonDeliverables = pendingDeliverables.filter((deliverable) => {
+    const deliverableDaysLeft = daysUntil(deliverable.expectedDeliveryDate);
+
+    return deliverableDaysLeft !== null && deliverableDaysLeft >= 0 && deliverableDaysLeft <= 3;
+  }).length;
+
+  let score = 100;
+
+  if (!totalDeliverables) {
+    score -= 20;
+  }
+
+  if (!project.endsOn) {
+    score -= 10;
+  }
+
+  if (progressGap > 0.5) {
+    score -= 35;
+  } else if (progressGap > 0.25) {
+    score -= 20;
+  } else if (progressGap > 0.1) {
+    score -= 10;
+  }
+
+  score -= Math.min(overdueDeliverables * 25, 45);
+  score -= Math.min(dueSoonDeliverables * 8, 20);
+
+  if (projectDaysLeft !== null && projectDaysLeft < 0 && pendingDeliverables.length) {
+    score -= 30;
+  }
+
+  if (score >= 75) {
+    return { label: "Healthy", tone: "active" };
+  }
+
+  if (score >= 45) {
+    return { label: "Needs attention", tone: "warning" };
+  }
+
+  return { label: "Not Healthy", tone: "danger" };
+}
+
+function getProjectTimeInsight(project: Project) {
+  const remainingDays = daysUntil(project.endsOn);
+
+  if (remainingDays === null) {
+    return { label: "Project time", value: "No end date", tone: "neutral" as const };
+  }
+
+  if (remainingDays < 0) {
+    return { label: "Project time", value: `${formatDayCount(remainingDays)} overdue`, tone: "danger" as const };
+  }
+
+  if (remainingDays === 0) {
+    return { label: "Project time", value: "Ends today", tone: "warning" as const };
+  }
+
+  return {
+    label: "Project time",
+    value: `${formatDayCount(remainingDays)} left`,
+    tone: remainingDays <= 7 ? ("warning" as const) : ("neutral" as const)
+  };
+}
+
+function getDeliverablesInsight(project: Project) {
+  const total = project.deliverables.length;
+  const remaining = project.deliverables.filter((deliverable) => !completedDeliverableStatuses.has(deliverable.status)).length;
+
+  if (!total) {
+    return { label: "Deliverables", value: "None yet", tone: "neutral" as const };
+  }
+
+  if (!remaining) {
+    return { label: "Deliverables", value: "All complete", tone: "active" as const };
+  }
+
+  return { label: "Deliverables", value: `${remaining} of ${total} left`, tone: "neutral" as const };
+}
+
+function getNextDeliveryInsight(project: Project) {
+  const nextDeliverable = project.deliverables
+    .filter((deliverable) => !completedDeliverableStatuses.has(deliverable.status) && deliverable.expectedDeliveryDate)
+    .sort((first, second) => {
+      const firstDate = parseDate(first.expectedDeliveryDate)?.getTime() ?? 0;
+      const secondDate = parseDate(second.expectedDeliveryDate)?.getTime() ?? 0;
+
+      return firstDate - secondDate;
+    })[0];
+
+  if (!nextDeliverable) {
+    return { label: "Next delivery", value: "No date set", tone: "neutral" as const };
+  }
+
+  const remainingDays = daysUntil(nextDeliverable.expectedDeliveryDate);
+
+  if (remainingDays === null) {
+    return { label: "Next delivery", value: "No date set", tone: "neutral" as const };
+  }
+
+  if (remainingDays < 0) {
+    return { label: "Next delivery", value: `${formatDayCount(remainingDays)} overdue`, tone: "danger" as const };
+  }
+
+  if (remainingDays === 0) {
+    return { label: "Next delivery", value: "Due today", tone: "warning" as const };
+  }
+
+  if (remainingDays <= 7) {
+    return { label: "Next delivery", value: `Due in ${formatDayCount(remainingDays)}`, tone: "warning" as const };
+  }
+
+  return { label: "Next delivery", value: formatShortDate(nextDeliverable.expectedDeliveryDate) ?? "Scheduled", tone: "neutral" as const };
+}
+
+function ProjectInsight({ label, value, tone }: { label: string; value: string; tone: ProjectInsightTone }) {
+  return (
+    <div
+      className={cn(
+        "min-w-0 rounded-md border px-2.5 py-2",
+        tone === "neutral" && "border-border bg-muted/20 text-muted-foreground",
+        tone === "active" && "border-emerald-200 bg-emerald-50 text-emerald-700",
+        tone === "warning" && "border-amber-200 bg-amber-50 text-amber-800",
+        tone === "danger" && "border-red-200 bg-red-50 text-red-700"
+      )}
+    >
+      <p className="text-[10px] font-medium uppercase text-current/70">{label}</p>
+      <p className="mt-0.5 truncate text-xs font-semibold text-current">{value}</p>
+    </div>
+  );
+}
 
 function ProjectRow({ project, mode }: { project: Project; mode: "admin" | "client" }) {
   const archiveReason = formatArchiveReason(project.archiveReason);
   const canDelete = mode === "admin" && project.activationState === "internal_draft" && ["draft", "proposal_sent"].includes(project.status);
   const href = mode === "admin" ? `/admin/projects/${project.id}` : `/portal/project/${project.id}`;
+  const insights = [getProjectTimeInsight(project), getDeliverablesInsight(project), getNextDeliveryInsight(project)];
+  const health = getProjectHealth(project);
 
   return (
     <Card className="transition-colors hover:bg-muted/40">
-      <CardContent className="flex flex-wrap items-center justify-between gap-3">
-        <Link href={href} className="min-w-0 flex-1 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+      <CardContent className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1 space-y-3">
+          <Link href={href} className="block rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
             <div>
               <p className="text-sm font-medium">{project.name}</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {mode === "admin" ? project.clientName : `Current phase: ${project.currentPhase}`}
               </p>
             </div>
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
+          </Link>
+          <details className="group">
+            <summary className="inline-flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden">
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  health.tone === "active" && "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+                  health.tone === "warning" && "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
+                  health.tone === "danger" && "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                )}
+              >
+                Health Status: {health.label}
+              </span>
+            </summary>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {insights.map((insight) => (
+                <ProjectInsight key={insight.label} label={insight.label} value={insight.value} tone={insight.tone} />
+              ))}
+            </div>
+          </details>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {canDelete ? (
             <form action={deleteDraftProject}>
               <input type="hidden" name="projectId" value={project.id} />

@@ -216,14 +216,23 @@ export async function getAdminProjects(): Promise<DataState<Project[]>> {
 
   const { data, error } = await supabase
     .from("projects")
-    .select("*, clients(name, primary_contact_email), project_templates(name, supports_calendar)")
+    .select("*, clients(name, primary_contact_email), project_templates(name, supports_calendar), deliverables(*)")
     .order("created_at", { ascending: false });
 
   if (error) {
     return emptyWithError([], error);
   }
 
-  return { data: data.map((project: any) => mapProject(project)), error: null };
+  return {
+    data: data.map((project: any) =>
+      mapProject(project, {
+        deliverables: (project.deliverables ?? []).map((deliverable: Database["public"]["Tables"]["deliverables"]["Row"]) =>
+          mapDeliverable(deliverable)
+        )
+      })
+    ),
+    error: null
+  };
 }
 
 export async function getAdminDashboardMetrics(): Promise<DataState<AdminDashboardMetrics>> {
@@ -281,7 +290,7 @@ export async function getPortalProjects(): Promise<DataState<Project[]>> {
 
   const { data, error } = await supabase
     .from("projects")
-    .select("*, clients(name, primary_contact_email), project_templates(name, supports_calendar)")
+    .select("*, clients(name, primary_contact_email), project_templates(name, supports_calendar), deliverables(*)")
     .eq("activation_state", "activated")
     .order("created_at", { ascending: false });
 
@@ -295,7 +304,13 @@ export async function getPortalProjects(): Promise<DataState<Project[]>> {
         (project: any) =>
           ["active", "paused"].includes(project.status) || (project.status === "archived" && project.archive_reason === "completed")
       )
-      .map((project: any) => mapProject(project)),
+      .map((project: any) =>
+        mapProject(project, {
+          deliverables: (project.deliverables ?? []).map((deliverable: Database["public"]["Tables"]["deliverables"]["Row"]) =>
+            mapDeliverable(deliverable)
+          )
+        })
+      ),
     error: null
   };
 }
