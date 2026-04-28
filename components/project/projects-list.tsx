@@ -23,30 +23,28 @@ function ProjectRow({ project, mode }: { project: Project; mode: "admin" | "clie
   const href = mode === "admin" ? `/admin/projects/${project.id}` : `/portal/project/${project.id}`;
 
   return (
-    <div className="relative">
-      <Link href={href} className="block">
-        <Card className="transition-colors hover:bg-muted/40">
-          <CardContent className={cn("flex flex-wrap items-center justify-between gap-3", canDelete ? "pr-28" : undefined)}>
+    <Card className="transition-colors hover:bg-muted/40">
+      <CardContent className="flex flex-wrap items-center justify-between gap-3">
+        <Link href={href} className="min-w-0 flex-1 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
             <div>
               <p className="text-sm font-medium">{project.name}</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {mode === "admin" ? project.clientName : `Current phase: ${project.currentPhase}`}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone={getProjectStateTone(project.status)}>{getMainProjectState(project)}</Badge>
-              {archiveReason ? <Badge>{archiveReason}</Badge> : null}
-            </div>
-          </CardContent>
-        </Card>
-      </Link>
-      {canDelete ? (
-        <form action={deleteDraftProject} className="absolute right-5 top-1/2 -translate-y-1/2">
-          <input type="hidden" name="projectId" value={project.id} />
-          <Button type="submit" variant="danger">Delete</Button>
-        </form>
-      ) : null}
-    </div>
+        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {canDelete ? (
+            <form action={deleteDraftProject}>
+              <input type="hidden" name="projectId" value={project.id} />
+              <Button type="submit" variant="danger">Delete</Button>
+            </form>
+          ) : null}
+          <Badge tone={getProjectStateTone(project.status)}>{getMainProjectState(project)}</Badge>
+          {archiveReason ? <Badge>{archiveReason}</Badge> : null}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

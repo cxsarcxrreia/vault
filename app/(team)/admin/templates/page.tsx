@@ -28,7 +28,7 @@ export default async function TemplatesPage({ searchParams }: TemplatesPageProps
         title="Service templates"
         description="Templates define default macro phases, deliverable suggestions, responsibility presets, and calendar support."
         actions={
-          <ButtonLink href="/admin/templates/new" variant="outline">
+          <ButtonLink href="/admin/templates/new" className="bg-black text-white hover:bg-neutral-800">
             Create New Service Template
           </ButtonLink>
         }

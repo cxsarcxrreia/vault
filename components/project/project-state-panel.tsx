@@ -52,7 +52,7 @@ export function ProjectStatePanel({ project }: { project: Project }) {
                 <option value="expired">Expired</option>
               </select>
             </label>
-            <Button type="submit" variant="outline">Archive project</Button>
+            <Button type="submit" className="bg-sky-600 text-white hover:bg-sky-700">Archive project</Button>
           </form>
         )}
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">

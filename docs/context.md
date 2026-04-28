@@ -141,14 +141,16 @@ Each deliverable should support:
 
 Deliverable statuses:
 
-- planned
-- in progress
+- planned / not started
+- in production
+- editing
 - ready for review
 - revision requested
 - approved
 - delivered
 
 When a client requests a revision, they submit a comment, revisions remaining decrement, the deliverable status changes to revision requested, and a notification event is recorded.
+Admins can update expected delivery dates after creation. If the date changes because of a client revision request, the client portal shows a small warning beside the expected date.
 
 ## Documents
 

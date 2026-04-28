@@ -16,6 +16,11 @@ export type AdminDashboardMetrics = {
 };
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const standardTemplateSlugs = new Set([
+  "one-time-content-production",
+  "monthly-content-retainer",
+  "branding-graphic-design"
+]);
 
 function getDemoDashboardMetrics(): AdminDashboardMetrics {
   const operationalProjects = demoProjects.filter((project) => ["active", "paused"].includes(project.status));
@@ -79,8 +84,16 @@ export async function getProjectTemplates(): Promise<DataState<ProjectTemplate[]
     return emptyWithError([], error);
   }
 
+  const visibleTemplates = (data ?? []).filter((template: Database["public"]["Tables"]["project_templates"]["Row"]) => {
+    if (!template.organization_id) {
+      return standardTemplateSlugs.has(template.slug);
+    }
+
+    return !standardTemplateSlugs.has(template.slug);
+  });
+
   return {
-    data: data.map((template: Database["public"]["Tables"]["project_templates"]["Row"]) => ({
+    data: visibleTemplates.map((template: Database["public"]["Tables"]["project_templates"]["Row"]) => ({
       id: template.id,
       name: template.name,
       slug: template.slug,

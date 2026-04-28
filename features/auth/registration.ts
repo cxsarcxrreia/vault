@@ -47,38 +47,6 @@ async function getUniqueOrganizationSlug(service: any, agencyName: string) {
   return candidate;
 }
 
-async function copyGlobalTemplates(service: any, organizationId: string) {
-  const { data: templates, error } = await service
-    .from("project_templates")
-    .select("name,slug,description,supports_calendar,default_phases,deliverable_type_suggestions,responsibility_presets")
-    .is("organization_id", null);
-
-  if (error) {
-    throw error;
-  }
-
-  if (!templates?.length) {
-    return;
-  }
-
-  const { error: insertError } = await service.from("project_templates").insert(
-    templates.map((template: any) => ({
-      organization_id: organizationId,
-      name: template.name,
-      slug: template.slug,
-      description: template.description,
-      supports_calendar: template.supports_calendar,
-      default_phases: template.default_phases,
-      deliverable_type_suggestions: template.deliverable_type_suggestions,
-      responsibility_presets: template.responsibility_presets
-    }))
-  );
-
-  if (insertError) {
-    throw insertError;
-  }
-}
-
 export async function completeAgencyRegistrationForUser(input: {
   userId: string;
   email: string;
@@ -160,13 +128,6 @@ export async function completeAgencyRegistration(input: {
     organizationId: organization.id,
     role: "owner"
   });
-
-  try {
-    await copyGlobalTemplates(service, organization.id);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to copy default templates.";
-    return `/register?error=${encodeURIComponent(message)}`;
-  }
 
   await service
     .from("agency_registrations")

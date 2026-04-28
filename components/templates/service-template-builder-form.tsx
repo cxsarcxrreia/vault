@@ -142,7 +142,7 @@ export function ServiceTemplateBuilderForm({ source = "templates" }: ServiceTemp
   const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
   const [isLibraryDropActive, setIsLibraryDropActive] = useState(false);
   const [newPhaseName, setNewPhaseName] = useState("");
-  const [newPhaseAllowsDocuments, setNewPhaseAllowsDocuments] = useState(false);
+  const [newPhaseAllowsDocuments, setNewPhaseAllowsDocuments] = useState(true);
 
   const availablePhases = useMemo(
     () => phaseCatalog.filter((phase) => !timelinePhaseKeys.includes(phase.phaseKey)),
@@ -216,7 +216,7 @@ export function ServiceTemplateBuilderForm({ source = "templates" }: ServiceTemp
       }
     ]);
     setNewPhaseName("");
-    setNewPhaseAllowsDocuments(false);
+    setNewPhaseAllowsDocuments(true);
   };
 
   const cancelHref = source === "project-draft" ? "/admin/projects?resumeDraft=1" : "/admin/templates";

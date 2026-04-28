@@ -105,15 +105,18 @@ on conflict (id) do update set
   activation_state = excluded.activation_state,
   current_phase_key = excluded.current_phase_key;
 
-insert into public.project_phases (project_id, name, phase_key, position, status)
+insert into public.project_phases (project_id, name, phase_key, allows_documents, position, status)
 values
-('00000000-0000-0000-0000-000000000301', 'Onboarding', 'onboarding', 1, 'complete'),
-('00000000-0000-0000-0000-000000000301', 'Proposal and Scope', 'proposal_scope', 2, 'complete'),
-('00000000-0000-0000-0000-000000000301', 'Creative Direction', 'creative_direction', 3, 'complete'),
-('00000000-0000-0000-0000-000000000301', 'Production', 'production', 4, 'active'),
-('00000000-0000-0000-0000-000000000301', 'Deliverables', 'deliverables', 5, 'not_started'),
-('00000000-0000-0000-0000-000000000301', 'Project Complete', 'project_complete', 6, 'not_started')
-on conflict (project_id, phase_key) do update set status = excluded.status, position = excluded.position;
+('00000000-0000-0000-0000-000000000301', 'Onboarding', 'onboarding', true, 1, 'complete'),
+('00000000-0000-0000-0000-000000000301', 'Proposal and Scope', 'proposal_scope', true, 2, 'complete'),
+('00000000-0000-0000-0000-000000000301', 'Creative Direction', 'creative_direction', true, 3, 'complete'),
+('00000000-0000-0000-0000-000000000301', 'Production', 'production', true, 4, 'active'),
+('00000000-0000-0000-0000-000000000301', 'Deliverables', 'deliverables', true, 5, 'not_started'),
+('00000000-0000-0000-0000-000000000301', 'Project Complete', 'project_complete', false, 6, 'not_started')
+on conflict (project_id, phase_key) do update set
+  allows_documents = excluded.allows_documents,
+  status = excluded.status,
+  position = excluded.position;
 
 insert into public.deliverables (
   id,
@@ -121,6 +124,7 @@ insert into public.deliverables (
   title,
   deliverable_type,
   expected_delivery_date,
+  expected_delivery_date_changed_for_revision,
   status,
   revision_limit,
   revisions_remaining,
@@ -133,6 +137,7 @@ values
   'Launch Reel Batch',
   'Reels',
   '2026-05-01',
+  false,
   'ready_for_review',
   2,
   2,
@@ -144,12 +149,16 @@ values
   'Edited Photo Selects',
   'Photos',
   '2026-05-05',
-  'in_progress',
+  false,
+  'editing',
   1,
   1,
   null
 )
-on conflict (id) do update set status = excluded.status, revisions_remaining = excluded.revisions_remaining;
+on conflict (id) do update set
+  expected_delivery_date_changed_for_revision = excluded.expected_delivery_date_changed_for_revision,
+  status = excluded.status,
+  revisions_remaining = excluded.revisions_remaining;
 
 insert into public.documents (id, project_id, title, document_type, phase_key, external_url, visible_to_client)
 values

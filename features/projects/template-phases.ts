@@ -22,7 +22,7 @@ function toTemplatePhaseDefinition(value: unknown, index: number): TemplatePhase
     return {
       name: trimmed,
       phaseKey: phaseKeyFromName(trimmed, index),
-      allowsDocuments: false,
+      allowsDocuments: true,
       isStandard: false
     };
   }
@@ -60,7 +60,7 @@ function toTemplatePhaseDefinition(value: unknown, index: number): TemplatePhase
       ? row.allowsDocuments
       : typeof row.allows_documents === "boolean"
         ? row.allows_documents
-        : matchingStandardPhase?.allowsDocuments ?? false;
+        : matchingStandardPhase?.allowsDocuments ?? true;
   const isStandard =
     typeof row.isStandard === "boolean"
       ? row.isStandard

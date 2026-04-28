@@ -35,8 +35,8 @@ export function ProjectActivationPanel({ project }: { project: Project }) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-4 lg:grid-cols-4">
-        <form action={updateDealStatus} className="space-y-3">
+      <CardContent className="grid items-stretch gap-4 lg:grid-cols-4">
+        <form action={updateDealStatus} className="flex h-full flex-col gap-3">
           <input type="hidden" name="projectId" value={project.id} />
           <label className="space-y-2">
             <span className="text-sm font-medium">Proposal status</span>
@@ -51,22 +51,22 @@ export function ProjectActivationPanel({ project }: { project: Project }) {
               <option value="proposal_approved">Proposal approved</option>
             </select>
           </label>
-          <Button type="submit" variant="outline" disabled={proposalLocked}>Update proposal</Button>
+          <Button type="submit" variant="outline" disabled={proposalLocked} className="mt-auto w-fit">Update proposal</Button>
         </form>
-        <form action={confirmPayment} className="space-y-3">
+        <form action={confirmPayment} className="flex h-full flex-col gap-3">
           <input type="hidden" name="projectId" value={project.id} />
           <p className="text-sm text-muted-foreground">Use this after the proposal is approved and payment or deposit is confirmed outside the app.</p>
-          <Button type="submit" variant="outline" disabled={!proposalApproved || paymentConfirmed || isActive || isSuspended}>Confirm payment</Button>
+          <Button type="submit" variant="outline" disabled={!proposalApproved || paymentConfirmed || isActive || isSuspended} className="mt-auto w-fit">Confirm payment</Button>
         </form>
-        <form action={activateProject} className="space-y-3">
+        <form action={activateProject} className="flex h-full flex-col gap-3">
           <input type="hidden" name="projectId" value={project.id} />
           <p className="text-sm text-muted-foreground">Activation makes the project visible in the client portal.</p>
-          <Button type="submit" disabled={!canActivate || isActive || isSuspended}>Activate portal</Button>
+          <Button type="submit" disabled={!canActivate || isActive || isSuspended} className="mt-auto w-fit">Activate portal</Button>
         </form>
-        <form action={syncClientPortalAccess} className="space-y-3">
+        <form action={syncClientPortalAccess} className="flex h-full flex-col gap-3">
           <input type="hidden" name="projectId" value={project.id} />
           <p className="text-sm text-muted-foreground">Creates or repairs the primary client contact portal membership.</p>
-          <Button type="submit" variant="outline" disabled={!isActive || isSuspended}>Sync client access</Button>
+          <Button type="submit" variant="outline" disabled={!isActive || isSuspended} className="mt-auto w-fit">Sync client access</Button>
         </form>
       </CardContent>
     </Card>
