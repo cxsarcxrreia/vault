@@ -255,7 +255,7 @@ function ProjectRow({ project, mode }: { project: Project; mode: "admin" | "clie
                   health.tone === "danger" && "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
                 )}
               >
-                Health Status: {health.label}
+                {health.label}
               </span>
             </summary>
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
