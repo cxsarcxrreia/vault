@@ -25,10 +25,14 @@ function normalizeRelativePath(path: string) {
 }
 
 export function getCanonicalAppUrl() {
+  return getConfiguredAppUrl() ?? LOCAL_APP_URL;
+}
+
+function getConfiguredAppUrl() {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
   if (!configured || !isHttpUrl(configured)) {
-    return LOCAL_APP_URL;
+    return null;
   }
 
   return trimTrailingSlash(configured);
@@ -50,36 +54,89 @@ function getOriginFromHost(host: string, protocol: string) {
   return trimTrailingSlash(`${protocol}://${host}`);
 }
 
-function isTrustedRequestOrigin(origin: string) {
-  const requestHostname = getUrlHostname(origin);
-  const configuredHostname = getUrlHostname(getCanonicalAppUrl());
+function getFirstHeaderValue(value: string | null) {
+  return value?.split(",")[0]?.trim() || null;
+}
 
-  if (!requestHostname) {
+function getProtocolFromRequest(host: string, forwardedProtocol: string | null) {
+  const protocol = getFirstHeaderValue(forwardedProtocol);
+
+  if (protocol === "http" || protocol === "https") {
+    return protocol;
+  }
+
+  return host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+}
+
+function getOriginFromHeader(value: string | null) {
+  const headerValue = getFirstHeaderValue(value);
+
+  if (!headerValue) {
+    return null;
+  }
+
+  try {
+    const url = new URL(headerValue);
+    return trimTrailingSlash(url.origin);
+  } catch {
+    return null;
+  }
+}
+
+function isLocalOrigin(origin: string) {
+  const hostname = getUrlHostname(origin);
+
+  return Boolean(hostname && isLocalHost(hostname));
+}
+
+function isTrustedRequestOrigin(origin: string) {
+  let requestUrl: URL;
+
+  try {
+    requestUrl = new URL(origin);
+  } catch {
     return false;
   }
 
-  if (isLocalHost(requestHostname)) {
+  if (isLocalHost(requestUrl.hostname)) {
     return true;
   }
 
-  return Boolean(configuredHostname && requestHostname === configuredHostname);
+  const configured = getConfiguredAppUrl();
+
+  if (!configured) {
+    return requestUrl.protocol === "https:";
+  }
+
+  const configuredHostname = getUrlHostname(configured);
+
+  if (configuredHostname && requestUrl.hostname === configuredHostname) {
+    return true;
+  }
+
+  if (configuredHostname && isLocalHost(configuredHostname) && requestUrl.protocol === "https:") {
+    return true;
+  }
+
+  return false;
 }
 
 export async function getRequestAppUrl() {
   const requestHeaders = await headers();
-  const forwardedHost = requestHeaders.get("x-forwarded-host");
-  const host = forwardedHost ?? requestHeaders.get("host");
+  const forwardedHost = getFirstHeaderValue(requestHeaders.get("x-forwarded-host"));
+  const host = getFirstHeaderValue(requestHeaders.get("host"));
+  const forwardedOrigin = forwardedHost
+    ? getOriginFromHost(forwardedHost, getProtocolFromRequest(forwardedHost, requestHeaders.get("x-forwarded-proto")))
+    : null;
+  const originHeader = getOriginFromHeader(requestHeaders.get("origin"));
+  const refererOrigin = getOriginFromHeader(requestHeaders.get("referer"));
+  const hostOrigin = host ? getOriginFromHost(host, getProtocolFromRequest(host, requestHeaders.get("x-forwarded-proto"))) : null;
+  const trustedOrigins = [forwardedOrigin, originHeader, refererOrigin, hostOrigin].filter(
+    (origin): origin is string => Boolean(origin && isTrustedRequestOrigin(origin))
+  );
+  const requestOrigin = trustedOrigins.find((origin) => !isLocalOrigin(origin)) ?? trustedOrigins[0];
 
-  if (!host) {
-    return getCanonicalAppUrl();
-  }
-
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
-  const requestOrigin = getOriginFromHost(host, protocol);
-
-  if (!isTrustedRequestOrigin(requestOrigin)) {
+  if (!requestOrigin) {
     return getCanonicalAppUrl();
   }
 
