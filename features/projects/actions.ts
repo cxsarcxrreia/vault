@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ensureClientMembership } from "@/features/auth/access";
 import { DEFAULT_DOCUMENT_PHASE_KEY, normalizeDocumentPhaseKey } from "@/features/documents/phases";
+import { getProjectCreationLimitState } from "@/features/plans/usage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { DeliverableStatus, TemplatePhaseDefinition } from "@/types/domain";
 import { phaseKeyFromName, templatePhaseDefinitionsFromDefault } from "./template-phases";
@@ -483,6 +484,19 @@ export async function createDraftProject(formData: FormData) {
   }
 
   const { supabase, user, profile } = await getTeamContext();
+  let limitState: Awaited<ReturnType<typeof getProjectCreationLimitState>>;
+
+  try {
+    limitState = await getProjectCreationLimitState(supabase, profile.organization_id!);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to check the organization project limit.";
+    redirect(`/admin/projects?error=${encodeURIComponent(message)}`);
+  }
+
+  if (!limitState.canCreateProject) {
+    redirect(`/admin/projects?error=${encodeURIComponent(limitState.limitError ?? "Project limit reached.")}&limit=projects`);
+  }
+
   const phaseRows = toProjectPhaseRows(await getDefaultPhaseDefinitionsForTemplate(supabase, parsed.data.templateId || undefined));
   const firstPhaseKey = phaseRows[0]?.phase_key ?? "onboarding";
 

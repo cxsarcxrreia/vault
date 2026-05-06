@@ -105,7 +105,7 @@ export async function completeAgencyRegistration(input: {
       name: registration.agency_name,
       slug,
       plan_tier: "free",
-      subscription_status: "manual"
+      subscription_status: "free"
     })
     .select("id")
     .single();

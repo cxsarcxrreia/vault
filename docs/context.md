@@ -68,6 +68,7 @@ Client users can only access their own activated projects.
 The public layer supports:
 
 - minimal product landing page
+- public plan comparison at `/pricing`
 - agency owner registration
 - magic-link completion for creating the first organization owner
 - one neutral sign-in route that sends existing team users to the admin panel and clients to the client portal based on database membership
@@ -77,6 +78,7 @@ The public layer supports:
 The internal backoffice supports:
 
 - draft project setup
+- current organization plan and project usage visibility
 - proposal and contract preparation
 - payment confirmation
 - project activation
@@ -231,12 +233,25 @@ Use:
 
 - Use one Render web service and one Supabase project for all agencies.
 - Keep agencies in `organizations`.
+- Store the SaaS plan on each organization with `plan_tier = free | medium | premium` and subscription state separate from project limit logic.
 - Resolve team access through `organization_members`, not email alone.
 - Keep client access explicit through `client_users`.
 - Keep registration only for new agency owners; clients and non-owner agency members are invited by an agency and then sign in with magic links.
 - Scope clients, projects, templates, phases, deliverables, documents, responsibilities, comments, approvals, and notification events to an organization.
-- Preserve Paladar as the first real agency instance, with `rangercardeal@gmail.com` as the owner/admin candidate.
-- Keep Stripe and payment enforcement out of the MVP until billing is explicitly planned.
+- Preserve Paladar as the first real agency instance, with `rangercardeal@gmail.com` as the owner/admin candidate and Paladar on the Premium plan.
+- Keep Stripe and real payment enforcement out of the MVP until billing is explicitly planned.
+
+## SaaS Plan Foundation
+
+Plan tiers:
+
+- Free: €0/month, maximum 2 non-archived projects.
+- Medium: €10/month, maximum 30 non-archived projects, marked as most popular.
+- Premium: €50/month, unlimited non-archived projects.
+
+Project limits are derived from `plan_tier`, not stored per organization. Draft, proposal, payment-confirmed, active, paused, and complete projects count toward the limit. Archived projects do not count.
+
+Upgrade controls are temporary/manual placeholders only until real payment processing is added.
 
 ## Future Agent Rules
 

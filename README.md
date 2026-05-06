@@ -2,7 +2,7 @@
 
 A minimal SaaS-ready MVP foundation for creative agency client portals built with Next.js App Router, TypeScript, Tailwind CSS, and Supabase.
 
-The product focuses on team-controlled project activation, macro project visibility, deliverables, lightweight revisions, documents, responsibilities, agency registration, and magic-link login. It intentionally does not include chat, billing, heavy file hosting, or advanced ERP features.
+The product focuses on team-controlled project activation, macro project visibility, deliverables, lightweight revisions, documents, responsibilities, agency registration, magic-link login, and a simple SaaS plan foundation. It intentionally does not include chat, Stripe/payment processing, heavy file hosting, or advanced ERP features.
 
 The deployment model is one web service and one Supabase project serving many agencies through organization-scoped data and RLS. It does not create one Supabase project per agency.
 
@@ -52,6 +52,7 @@ Copy `.env.example` to `.env.local` and fill in values from `npx supabase start`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_PROJECT_REF`
+- `APP_URL`
 - `NEXT_PUBLIC_APP_URL`
 - `ADMIN_BOOTSTRAP_EMAILS`
 
@@ -59,7 +60,7 @@ Do not commit real secrets.
 
 For hosted Supabase, use the same variable names. `NEXT_PUBLIC_SUPABASE_URL` must be the hosted project URL, `NEXT_PUBLIC_SUPABASE_ANON_KEY` must be the public anon key, and `SUPABASE_SERVICE_ROLE_KEY` must stay server-only. The app validates malformed or placeholder values at startup boundaries.
 
-In production, set `NEXT_PUBLIC_APP_URL` to the canonical deployed app origin, for example `https://vault-fosv.onrender.com`. Magic-link callbacks are built from this value and sent to Supabase as `https://vault-fosv.onrender.com/api/auth/callback` for default portal sign-in.
+In production, set both `APP_URL` and `NEXT_PUBLIC_APP_URL` to the canonical deployed app origin, for example `https://vault-fosv.onrender.com`. Magic-link callbacks are built from `APP_URL` first, then `NEXT_PUBLIC_APP_URL`, and never from request host headers. On Render, set both values to `https://vault-fosv.onrender.com` so Supabase emails cannot pick up Render's internal `localhost:10000` port.
 
 `ADMIN_BOOTSTRAP_EMAILS` is a comma-separated allowlist for the first team owner claim, for example `owner@agency.com,ops@agency.com`. In production, set this before anyone uses `/admin/bootstrap`. Local development allows bootstrap without this variable so fresh local databases are not blocked.
 
@@ -89,6 +90,8 @@ If the CLI reports that no access token is provided, run `npx supabase login` or
 
 Paladar is the first local/real agency instance. The committed migration ensures an organization with slug `paladar` exists and seeds `rangercardeal@gmail.com` as a pending owner invitation. After that email signs in, it receives owner/admin access through database membership.
 
+Paladar is marked as a Premium organization with `subscription_status = manual`. Apply the latest migrations with `npx supabase db push` before expecting hosted plan limits to match the application code.
+
 If needed, an allowlisted first Paladar user can still open `/admin/bootstrap` and claim owner access. This route creates the Paladar owner membership and locks itself once an owner exists.
 
 New agencies should use `/register`. The owner enters agency name, owner name, and owner email, receives a Supabase magic link, and the app creates the organization, profile, owner membership, and default templates after authentication.
@@ -107,13 +110,27 @@ The app uses one Supabase magic-link mechanism for both team and client users. T
 - Project activation creates or updates the primary client contact auth user/profile and `client_users` membership.
 - `/admin` and `/portal` are protected server-side by middleware and database RLS.
 
+## SaaS Plans
+
+The MVP plan model lives on `organizations.plan_tier` and `organizations.subscription_status`.
+
+- Free: €0/month, maximum 2 non-archived projects.
+- Medium: €10/month, maximum 30 non-archived projects, shown as most popular.
+- Premium: €50/month, unlimited non-archived projects.
+
+Project limits are enforced server-side in draft project creation before any client or project rows are inserted. Draft, proposal, payment-confirmed, active, paused, and complete projects count toward the limit. Archived projects do not count.
+
+Payment processing is intentionally not implemented yet. `/admin/billing` includes owner/admin-only manual plan marking as a temporary placeholder until Stripe checkout and webhook-backed subscription state are added.
+
 ## Routes
 
 - `/`: public SaaS landing page
+- `/pricing`: public plan comparison
 - `/register`: agency owner registration
 - `/register/complete`: magic-link completion for new agencies
 - `/login`: neutral magic-link sign-in for existing agency members and clients
 - `/admin`: organization-scoped team panel
+- `/admin/billing`: current organization plan and project usage
 - `/portal`: explicit client membership portal
 - `/dev-entry`: internal testing shortcuts
 

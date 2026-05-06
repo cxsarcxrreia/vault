@@ -92,13 +92,17 @@ The app uses one Supabase project for many agencies. Agency-owned tables carry o
 - Team-created service templates with a custom macro timeline builder based on the standard phase nodes.
 - Draft project creation handoff that routes custom template selection through the template builder and resumes the draft form afterward.
 - Project document grouping and document phase options now follow the actual project timeline phase order when a custom template changes it.
+- SaaS plan tiers on organizations: Free, Medium, and Premium.
+- Public `/pricing` plan comparison and admin `/admin/billing` plan usage page.
+- Server-side draft project limit enforcement based on non-archived project count.
+- Paladar is treated as Premium with `subscription_status = manual`.
 
 ## Later
 
 - Proposal token approval page.
 - Email provider integration for notification events.
 - Granular role management UI.
-- Billing plan UI, Stripe checkout, Stripe webhooks, and subscription/paywall enforcement.
+- Stripe checkout, Stripe webhooks, and provider-backed subscription/paywall enforcement.
 - Document edit/delete controls.
 - Template editing UI for custom deliverable suggestions and responsibility presets.
 
@@ -106,6 +110,7 @@ The app uses one Supabase project for many agencies. Agency-owned tables carry o
 
 The app expects:
 
+- `APP_URL`
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -121,6 +126,15 @@ npm run supabase:types
 
 Run `npm run supabase:check` after schema changes to verify the hosted project without printing secrets.
 
+Production magic-link redirects must use configured app URLs only. On Render, set both `APP_URL` and `NEXT_PUBLIC_APP_URL` to `https://vault-fosv.onrender.com`; do not derive Supabase email redirect URLs from request host headers because Render may expose its internal `localhost:10000` port.
+
+The SaaS plan migration is `supabase/migrations/202605050001_saas_plan_tiers.sql`. Push it before relying on hosted project limits:
+
+```bash
+npx supabase db push
+npm run supabase:types
+```
+
 ## Production Auth Model
 
 The app keeps a single Supabase magic-link auth mechanism. Before a link is sent, server actions resolve the email against the database:
@@ -132,6 +146,7 @@ The app keeps a single Supabase magic-link auth mechanism. Before a link is sent
 - Post-login routing resolves the user's profile and membership instead of trusting raw email or requested path.
 - Middleware protects `/admin` with organization membership checks and `/portal` with team-preview or client-membership checks.
 - New agencies register through `/register`; completion creates the organization, profile, owner membership, and default organization templates after magic-link authentication.
+- New agencies start on the Free plan. Plan upgrades are currently manual placeholders from `/admin/billing`; real payments are still out of scope.
 - Existing agency members and clients both enter through `/login`; the app sends team users to `/admin` and client users to `/portal`.
 
 ## Open Questions

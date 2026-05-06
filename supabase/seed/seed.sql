@@ -1,6 +1,10 @@
-insert into public.organizations (id, name, slug)
-values ('00000000-0000-0000-0000-000000000001', 'Paladar', 'paladar')
-on conflict (id) do update set name = excluded.name, slug = excluded.slug;
+insert into public.organizations (id, name, slug, plan_tier, subscription_status)
+values ('00000000-0000-0000-0000-000000000001', 'Paladar', 'paladar', 'premium', 'manual')
+on conflict (id) do update set
+  name = excluded.name,
+  slug = excluded.slug,
+  plan_tier = excluded.plan_tier,
+  subscription_status = excluded.subscription_status;
 
 insert into public.project_templates (
   id,

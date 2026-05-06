@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createDraftProject } from "@/features/projects/actions";
+import { PROJECT_LIMIT_COUNT_DESCRIPTION, type PlanUsageSummary } from "@/features/plans/constants";
 import { RESPONSIBILITY_OWNERS, RESPONSIBILITY_STARTER_ROWS } from "@/features/projects/responsibilities";
 import type { ProjectTemplate } from "@/types/domain";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 const CUSTOM_TEMPLATE_VALUE = "__custom__";
@@ -39,7 +40,13 @@ function getDefaultResponsibilityRows(): DraftResponsibilityRow[] {
   }));
 }
 
-export function DraftProjectForm({ templates }: { templates: ProjectTemplate[] }) {
+export function DraftProjectForm({
+  templates,
+  planUsage
+}: {
+  templates: ProjectTemplate[];
+  planUsage?: PlanUsageSummary;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -145,6 +152,25 @@ export function DraftProjectForm({ templates }: { templates: ProjectTemplate[] }
     );
   };
 
+  if (planUsage?.isLimitReached) {
+    return (
+      <Card>
+        <CardHeader>
+          <h2 className="font-semibold">Project limit reached</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {planUsage.planName} is currently at {planUsage.usageLabel}. Archive a completed project or upgrade before creating another draft.
+          </p>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <p className="text-sm text-muted-foreground">{PROJECT_LIMIT_COUNT_DESCRIPTION}</p>
+          <ButtonLink href="/admin/billing" variant="outline" className="shrink-0">
+            View upgrade options
+          </ButtonLink>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <details
       ref={detailsRef}
@@ -162,6 +188,11 @@ export function DraftProjectForm({ templates }: { templates: ProjectTemplate[] }
           <p className="mt-1 text-sm text-muted-foreground">
             Drafts stay internal until payment is confirmed and the team activates the portal.
           </p>
+          {planUsage ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {planUsage.planName} usage: {planUsage.usageLabel}. Archived projects do not count.
+            </p>
+          ) : null}
         </CardHeader>
         <CardContent>
           <form

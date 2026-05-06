@@ -43,6 +43,24 @@ If secrets were ever committed to `.env.example`, rotate the anon and service ro
 - One Supabase project serves many agencies through `organizations`.
 - Team users manage records through active `organization_members` rows.
 - Client users can read only their own activated projects through organization-scoped `client_users` rows.
-- Paladar is seeded as the first organization, with `rangercardeal@gmail.com` as the owner invitation/bootstrap candidate.
+- Organizations carry `plan_tier` and `subscription_status`; project limits are derived from the plan tier in application server actions.
+- Paladar is seeded as the first organization on the Premium plan, with `rangercardeal@gmail.com` as the owner invitation/bootstrap candidate.
 - Deliverable revision and approval state lives on deliverables and related comment/approval tables.
 - Documents store metadata and external links, not heavy uploaded assets.
+
+## Plan Migration
+
+The SaaS plan foundation is in `migrations/202605050001_saas_plan_tiers.sql`.
+
+- Free: 2 non-archived projects.
+- Medium: 30 non-archived projects.
+- Premium: unlimited non-archived projects.
+
+Apply hosted schema changes with:
+
+```bash
+npx supabase db push
+npm run supabase:types
+```
+
+Payment processing is intentionally not implemented yet; `subscription_status = manual` marks placeholder/manual plan changes.

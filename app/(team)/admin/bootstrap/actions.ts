@@ -42,7 +42,7 @@ export async function claimFirstOwner() {
       {
         name: "Paladar",
         slug: "paladar",
-        plan_tier: "manual",
+        plan_tier: "premium",
         subscription_status: "manual"
       },
       { onConflict: "slug" }

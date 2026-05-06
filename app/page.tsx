@@ -18,6 +18,9 @@ export default function HomePage() {
               Create agency
               <ArrowRight className="ml-2 size-4" />
             </ButtonLink>
+            <ButtonLink href="/pricing" variant="outline">
+              View pricing
+            </ButtonLink>
             <ButtonLink href="/login" variant="outline">
               Sign in
             </ButtonLink>
