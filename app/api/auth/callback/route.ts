@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { hasTeamOwner, isBootstrapEmailAllowed, resolvePostLoginPath } from "@/features/auth/access";
+import { getCanonicalAppUrl } from "@/lib/app-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function safeRelativePath(path: string | null, fallback = "/portal") {
@@ -12,7 +13,7 @@ function safeRelativePath(path: string | null, fallback = "/portal") {
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
-  const appUrl = requestUrl.origin;
+  const appUrl = getCanonicalAppUrl();
 
   const code = requestUrl.searchParams.get("code");
   const next = safeRelativePath(requestUrl.searchParams.get("next"), "/portal");
