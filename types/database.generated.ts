@@ -265,6 +265,7 @@ export type Database = {
           created_at: string
           deliverable_type: string
           expected_delivery_date: string | null
+          expected_delivery_date_changed_for_revision: boolean
           external_url: string | null
           id: string
           internal_notes: string | null
@@ -284,6 +285,7 @@ export type Database = {
           created_at?: string
           deliverable_type: string
           expected_delivery_date?: string | null
+          expected_delivery_date_changed_for_revision?: boolean
           external_url?: string | null
           id?: string
           internal_notes?: string | null
@@ -303,6 +305,7 @@ export type Database = {
           created_at?: string
           deliverable_type?: string
           expected_delivery_date?: string | null
+          expected_delivery_date_changed_for_revision?: boolean
           external_url?: string | null
           id?: string
           internal_notes?: string | null
@@ -447,21 +450,27 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          plan_tier: string
           slug: string
+          subscription_status: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
+          plan_tier?: string
           slug: string
+          subscription_status?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          plan_tier?: string
           slug?: string
+          subscription_status?: string
           updated_at?: string
         }
         Relationships: []
@@ -806,6 +815,7 @@ export type Database = {
       deliverable_status:
         | "planned"
         | "in_progress"
+        | "editing"
         | "ready_for_review"
         | "revision_requested"
         | "approved"
@@ -984,6 +994,7 @@ export const Constants = {
       deliverable_status: [
         "planned",
         "in_progress",
+        "editing",
         "ready_for_review",
         "revision_requested",
         "approved",

@@ -16,6 +16,11 @@ export type AdminDashboardMetrics = {
 };
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const standardTemplateSlugs = new Set([
+  "one-time-content-production",
+  "monthly-content-retainer",
+  "branding-graphic-design"
+]);
 
 function getDemoDashboardMetrics(): AdminDashboardMetrics {
   const operationalProjects = demoProjects.filter((project) => ["active", "paused"].includes(project.status));
@@ -63,6 +68,68 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   return data ?? null;
 }
 
+export async function getCurrentOrganizationName(): Promise<string | null> {
+  const supabase = await getClient();
+
+  if (!supabase) {
+    return "Paladar";
+  }
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data } = await supabase
+    .from("organization_members")
+    .select("organizations(name)")
+    .eq("profile_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const organization = Array.isArray(data?.organizations) ? data.organizations[0] : data?.organizations;
+  return organization?.name ?? null;
+}
+
+export async function getCurrentOrganizationIdentity(): Promise<{ id: string; name: string } | null> {
+  const supabase = await getClient();
+
+  if (!supabase) {
+    return { id: "demo-paladar", name: "Paladar" };
+  }
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data } = await supabase
+    .from("organization_members")
+    .select("organization_id,organizations(name)")
+    .eq("profile_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const organization = Array.isArray(data?.organizations) ? data.organizations[0] : data?.organizations;
+
+  return data?.organization_id && organization?.name
+    ? {
+        id: data.organization_id,
+        name: organization.name
+      }
+    : null;
+}
+
 export async function getProjectTemplates(): Promise<DataState<ProjectTemplate[]>> {
   const supabase = await getClient();
 
@@ -79,8 +146,16 @@ export async function getProjectTemplates(): Promise<DataState<ProjectTemplate[]
     return emptyWithError([], error);
   }
 
+  const visibleTemplates = (data ?? []).filter((template: Database["public"]["Tables"]["project_templates"]["Row"]) => {
+    if (!template.organization_id) {
+      return standardTemplateSlugs.has(template.slug);
+    }
+
+    return !standardTemplateSlugs.has(template.slug);
+  });
+
   return {
-    data: data.map((template: Database["public"]["Tables"]["project_templates"]["Row"]) => ({
+    data: visibleTemplates.map((template: Database["public"]["Tables"]["project_templates"]["Row"]) => ({
       id: template.id,
       name: template.name,
       slug: template.slug,
@@ -141,14 +216,23 @@ export async function getAdminProjects(): Promise<DataState<Project[]>> {
 
   const { data, error } = await supabase
     .from("projects")
-    .select("*, clients(name, primary_contact_email), project_templates(name, supports_calendar)")
+    .select("*, clients(name, primary_contact_email), project_templates(name, supports_calendar), deliverables(*)")
     .order("created_at", { ascending: false });
 
   if (error) {
     return emptyWithError([], error);
   }
 
-  return { data: data.map((project: any) => mapProject(project)), error: null };
+  return {
+    data: data.map((project: any) =>
+      mapProject(project, {
+        deliverables: (project.deliverables ?? []).map((deliverable: Database["public"]["Tables"]["deliverables"]["Row"]) =>
+          mapDeliverable(deliverable)
+        )
+      })
+    ),
+    error: null
+  };
 }
 
 export async function getAdminDashboardMetrics(): Promise<DataState<AdminDashboardMetrics>> {
@@ -206,7 +290,7 @@ export async function getPortalProjects(): Promise<DataState<Project[]>> {
 
   const { data, error } = await supabase
     .from("projects")
-    .select("*, clients(name, primary_contact_email), project_templates(name, supports_calendar)")
+    .select("*, clients(name, primary_contact_email), project_templates(name, supports_calendar), deliverables(*)")
     .eq("activation_state", "activated")
     .order("created_at", { ascending: false });
 
@@ -220,7 +304,13 @@ export async function getPortalProjects(): Promise<DataState<Project[]>> {
         (project: any) =>
           ["active", "paused"].includes(project.status) || (project.status === "archived" && project.archive_reason === "completed")
       )
-      .map((project: any) => mapProject(project)),
+      .map((project: any) =>
+        mapProject(project, {
+          deliverables: (project.deliverables ?? []).map((deliverable: Database["public"]["Tables"]["deliverables"]["Row"]) =>
+            mapDeliverable(deliverable)
+          )
+        })
+      ),
     error: null
   };
 }

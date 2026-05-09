@@ -6,11 +6,13 @@ Creative Agency Client Portal
 
 ## Product Summary
 
-This project is a web application for a creative agency to manage the operational relationship with clients through a simple, premium, minimal portal.
+This project is a SaaS-ready web application for creative and marketing agencies to manage the operational relationship with clients through a simple, premium, minimal portal.
 
 The app centralizes client visibility, macro timeline status, deliverables, approvals, lightweight revision handling, key documents, and responsibility ownership between the agency and the client.
 
 This is not a generic ERP, not a chat platform, and not a heavy file hosting system.
+
+The product runs as one shared application backed by one Supabase project. Many agencies live inside the same database as separate organizations, and every agency-owned record must be isolated by organization membership and RLS.
 
 ## Product Goal
 
@@ -40,7 +42,7 @@ Create a minimal but robust portal where a client can always understand:
 
 ### Team Users
 
-Internal agency users create draft projects, manage activation, configure deliverables, add documents, assign responsibilities, and trigger notification events.
+Internal agency users belong to an organization and create draft projects, manage activation, configure deliverables, add documents, assign responsibilities, and trigger notification events inside that organization.
 
 Team roles:
 
@@ -61,11 +63,22 @@ Client users can only access their own activated projects.
 
 ## Product Split
 
+### Public SaaS Layer
+
+The public layer supports:
+
+- minimal product landing page
+- public plan comparison at `/pricing`
+- agency owner registration
+- magic-link completion for creating the first organization owner
+- one neutral sign-in route that sends existing team users to the admin panel and clients to the client portal based on database membership
+
 ### Team Panel
 
 The internal backoffice supports:
 
 - draft project setup
+- current organization plan and project usage visibility
 - proposal and contract preparation
 - payment confirmation
 - project activation
@@ -130,14 +143,16 @@ Each deliverable should support:
 
 Deliverable statuses:
 
-- planned
-- in progress
+- planned / not started
+- in production
+- editing
 - ready for review
 - revision requested
 - approved
 - delivered
 
 When a client requests a revision, they submit a comment, revisions remaining decrement, the deliverable status changes to revision requested, and a notification event is recorded.
+Admins can update expected delivery dates after creation. If the date changes because of a client revision request, the client portal shows a small warning beside the expected date.
 
 ## Documents
 
@@ -213,6 +228,30 @@ Use:
 - Zod for validation
 - React Hook Form where forms become non-trivial
 - Lucide React for icons
+
+## Multi-Tenant Direction
+
+- Use one Render web service and one Supabase project for all agencies.
+- Keep agencies in `organizations`.
+- Store the SaaS plan on each organization with `plan_tier = free | medium | premium` and subscription state separate from project limit logic.
+- Resolve team access through `organization_members`, not email alone.
+- Keep client access explicit through `client_users`.
+- Keep registration only for new agency owners; clients and non-owner agency members are invited by an agency and then sign in with magic links.
+- Scope clients, projects, templates, phases, deliverables, documents, responsibilities, comments, approvals, and notification events to an organization.
+- Preserve Paladar as the first real agency instance, with `rangercardeal@gmail.com` as the owner/admin candidate and Paladar on the Premium plan.
+- Keep Stripe and real payment enforcement out of the MVP until billing is explicitly planned.
+
+## SaaS Plan Foundation
+
+Plan tiers:
+
+- Free: €0/month, maximum 2 non-archived projects.
+- Medium: €10/month, maximum 30 non-archived projects, marked as most popular.
+- Premium: €50/month, unlimited non-archived projects.
+
+Project limits are derived from `plan_tier`, not stored per organization. Draft, proposal, payment-confirmed, active, paused, and complete projects count toward the limit. Archived projects do not count.
+
+Upgrade controls are temporary/manual placeholders only until real payment processing is added.
 
 ## Future Agent Rules
 

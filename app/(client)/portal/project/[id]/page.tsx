@@ -4,6 +4,7 @@ import { DeliverableApprovalCount } from "@/components/deliverables/deliverable-
 import { DeliverablesList } from "@/components/deliverables/deliverables-list";
 import { DocumentList } from "@/components/documents/document-list";
 import { ProjectCompletionSummary } from "@/components/project/project-completion-summary";
+import { RecentClientProjectTracker } from "@/components/project/recent-project-tracker";
 import { ProjectSummary } from "@/components/project/project-summary";
 import { MacroTimeline, MacroTimelineViewToggle, type MacroTimelineDisplayMode } from "@/components/project/timeline";
 import { ResponsibilityList } from "@/components/responsibilities/responsibility-list";
@@ -78,6 +79,13 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
           <FormMessage type="error">{result.error ?? "Project not found."}</FormMessage>
         ) : (
           <>
+        <RecentClientProjectTracker
+          project={{
+            id: project.id,
+            name: project.name,
+            state: getMainProjectState(project)
+          }}
+        />
         <div id="project-summary" className="scroll-mt-6">
           <ProjectSummary project={project} />
         </div>

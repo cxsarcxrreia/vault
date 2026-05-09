@@ -4,6 +4,10 @@
 
 Next.js App Router routes. Route groups separate public, auth, team, and client areas without changing URLs.
 
+- `app/page.tsx`: public SaaS landing page.
+- `app/register`: agency registration and post-magic-link completion.
+- `app/dev-entry`: internal testing shortcuts formerly shown on the home page.
+
 Do not put domain-heavy business logic here. Pages should compose feature modules, layout components, and server actions.
 
 ## `components`
@@ -17,12 +21,13 @@ Reusable UI and layout primitives.
 - `components/deliverables`: deliverable cards and status UI.
 - `components/documents`: document list UI.
 - `components/responsibilities`: responsibility matrix UI.
+- `components/plans`: plan comparison card UI.
 
 Keep these components rebrandable and mostly presentation-focused.
 
 ## `features`
 
-Domain modules for auth, clients, projects, templates, deliverables, documents, notifications, responsibilities, and timeline.
+Domain modules for auth, clients, projects, templates, plans, deliverables, documents, notifications, responsibilities, and timeline.
 
 Feature folders own domain types, queries, server actions, validators, and local README notes when a module grows.
 

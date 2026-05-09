@@ -63,6 +63,7 @@ export const clients: Client[] = [
 export const projects: Project[] = [
   {
     id: "project-sample",
+    organizationId: "demo-paladar",
     name: "Spring Launch Content",
     clientName: "Northline Studio",
     summary: "A one-time production package for launch assets, review, and final delivery links.",
@@ -88,6 +89,7 @@ export const projects: Project[] = [
         type: "Reels",
         status: "ready_for_review",
         expectedDeliveryDate: "2026-05-01",
+        expectedDeliveryDateChangedForRevision: false,
         revisionLimit: 2,
         revisionsRemaining: 2,
         externalUrl: "https://drive.google.com"
@@ -96,8 +98,9 @@ export const projects: Project[] = [
         id: "deliverable-2",
         title: "Edited Photo Selects",
         type: "Photos",
-        status: "in_progress",
+        status: "editing",
         expectedDeliveryDate: "2026-05-05",
+        expectedDeliveryDateChangedForRevision: false,
         revisionLimit: 1,
         revisionsRemaining: 1,
         externalUrl: null

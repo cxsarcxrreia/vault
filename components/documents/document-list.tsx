@@ -184,17 +184,13 @@ export function DocumentList({
                     ))}
                   </ul>
                 ) : (
-                  <p className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
-                    No documents have been added for {phase.label.toLowerCase()} yet.
-                  </p>
+                  <p className="text-sm text-muted-foreground">No documents yet.</p>
                 )}
               </section>
             ))}
           </div>
         ) : (
-          <p className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
-            No documents have been added yet.
-          </p>
+          <p className="text-sm text-muted-foreground">No documents yet.</p>
         )}
 
         {canManage ? (

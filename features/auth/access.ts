@@ -9,6 +9,11 @@ type AccessInvitation = Database["public"]["Tables"]["access_invitations"]["Row"
 type TeamRole = Database["public"]["Enums"]["team_role"];
 type ClientRole = Database["public"]["Enums"]["client_role"];
 type UserType = Database["public"]["Enums"]["user_type"];
+type TeamMembership = {
+  organization_id: string;
+  role: TeamRole;
+  status: string;
+};
 
 type AccessDecision = {
   allowed: boolean;
@@ -16,6 +21,7 @@ type AccessDecision = {
   reason?: string;
 };
 
+const DEFAULT_SIGN_IN_PATH = "/";
 const DEFAULT_PORTAL_PATH = "/portal";
 const DEFAULT_ADMIN_PATH = "/admin";
 const BOOTSTRAP_PATH = "/admin/bootstrap";
@@ -26,7 +32,7 @@ function normalizeEmail(email: string) {
 
 function sanitizeNext(next: string) {
   if (!next.startsWith("/") || next.startsWith("//")) {
-    return DEFAULT_PORTAL_PATH;
+    return DEFAULT_SIGN_IN_PATH;
   }
 
   return next;
@@ -54,12 +60,12 @@ export function isBootstrapEmailAllowed(email: string) {
 }
 
 export async function hasTeamOwner() {
-  const service = createSupabaseServiceRoleClient();
+  const service = createSupabaseServiceRoleClient() as any;
   const { count, error } = await service
-    .from("profiles")
+    .from("organization_members")
     .select("id", { count: "exact", head: true })
-    .eq("user_type", "team")
-    .eq("team_role", "owner");
+    .eq("role", "owner")
+    .eq("status", "active");
 
   if (error) {
     throw error;
@@ -81,6 +87,24 @@ async function findProfileByEmail(email: string): Promise<Profile | null> {
   }
 
   return data;
+}
+
+async function getPrimaryTeamMembership(profileId: string): Promise<TeamMembership | null> {
+  const service = createSupabaseServiceRoleClient() as any;
+  const { data, error } = await service
+    .from("organization_members")
+    .select("organization_id,role,status")
+    .eq("profile_id", profileId)
+    .eq("status", "active")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error && !["42P01", "PGRST200", "PGRST205"].includes(error.code)) {
+    throw error;
+  }
+
+  return data ?? null;
 }
 
 async function hasClientMembership(profileId: string) {
@@ -117,7 +141,7 @@ async function getPendingInvitation(email: string): Promise<AccessInvitation | n
   return data ?? null;
 }
 
-async function findAuthUserIdByEmail(email: string) {
+export async function findAuthUserIdByEmail(email: string) {
   const service = createSupabaseServiceRoleClient();
   const normalized = normalizeEmail(email);
   let page = 1;
@@ -171,14 +195,34 @@ export async function upsertProfile(input: {
   userType: UserType;
   organizationId: string | null;
   teamRole?: TeamRole | null;
+  fullName?: string | null;
 }) {
   const service = createSupabaseServiceRoleClient();
   const { error } = await service.from("profiles").upsert({
     id: input.profileId,
     email: normalizeEmail(input.email),
+    full_name: input.fullName ?? undefined,
     user_type: input.userType,
     organization_id: input.organizationId,
     team_role: input.teamRole ?? null
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function ensureTeamMembership(input: {
+  profileId: string;
+  organizationId: string;
+  role: TeamRole;
+}) {
+  const service = createSupabaseServiceRoleClient() as any;
+  const { error } = await service.from("organization_members").upsert({
+    organization_id: input.organizationId,
+    profile_id: input.profileId,
+    role: input.role,
+    status: "active"
   });
 
   if (error) {
@@ -202,7 +246,8 @@ export async function ensureClientMembership(input: {
   });
 
   const service = createSupabaseServiceRoleClient();
-  const { error } = await service.from("client_users").upsert({
+  const { error } = await (service as any).from("client_users").upsert({
+    organization_id: input.organizationId,
     client_id: input.clientId,
     profile_id: profileId,
     role: input.role ?? "client_owner"
@@ -225,6 +270,11 @@ async function acceptInvitation(invitation: AccessInvitation) {
       userType: "team",
       organizationId: invitation.organization_id,
       teamRole: invitation.team_role
+    });
+    await ensureTeamMembership({
+      profileId,
+      organizationId: invitation.organization_id!,
+      role: invitation.team_role ?? "member"
     });
   } else {
     if (!invitation.client_id || !invitation.organization_id) {
@@ -273,7 +323,9 @@ export async function resolveLoginAccess(email: string, requestedNext: string): 
   }
 
   if (profile.user_type === "team") {
-    if (!profile.organization_id || !profile.team_role) {
+    const membership = await getPrimaryTeamMembership(profile.id);
+
+    if (!membership) {
       return { allowed: false, next, reason: "team-profile-incomplete" };
     }
 
@@ -291,11 +343,15 @@ export async function resolvePostLoginPath(requestedNext: string, profile: Profi
   const next = sanitizeNext(requestedNext);
 
   if (!profile) {
-    return DEFAULT_PORTAL_PATH;
+    return DEFAULT_SIGN_IN_PATH;
   }
 
   if (profile.user_type === "team" && profile.organization_id && profile.team_role) {
-    return next.startsWith("/admin") || next.startsWith("/portal") ? next : DEFAULT_ADMIN_PATH;
+    const membership = await getPrimaryTeamMembership(profile.id);
+
+    if (membership) {
+      return next.startsWith("/admin") || next.startsWith("/portal") ? next : DEFAULT_ADMIN_PATH;
+    }
   }
 
   if (profile.user_type === "client" && (await hasClientMembership(profile.id))) {

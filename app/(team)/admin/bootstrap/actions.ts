@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { isBootstrapEmailAllowed } from "@/features/auth/access";
+import { ensureTeamMembership, isBootstrapEmailAllowed } from "@/features/auth/access";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -26,22 +26,24 @@ export async function claimFirstOwner() {
 
   const service = createSupabaseServiceRoleClient();
 
-  const { count } = await service
-    .from("profiles")
+  const { count } = await (service as any)
+    .from("organization_members")
     .select("id", { count: "exact", head: true })
-    .eq("user_type", "team")
-    .eq("team_role", "owner");
+    .eq("role", "owner")
+    .eq("status", "active");
 
   if ((count ?? 0) > 0) {
     redirect("/admin/bootstrap?error=owner-exists");
   }
 
-  const { data: organization, error: organizationError } = await service
+  const { data: organization, error: organizationError } = await (service as any)
     .from("organizations")
     .upsert(
       {
-        name: "Agency Workspace",
-        slug: "agency-workspace"
+        name: "Paladar",
+        slug: "paladar",
+        plan_tier: "premium",
+        subscription_status: "manual"
       },
       { onConflict: "slug" }
     )
@@ -64,6 +66,12 @@ export async function claimFirstOwner() {
   if (profileError) {
     redirect(`/admin/bootstrap?error=${encodeURIComponent(profileError.message)}`);
   }
+
+  await ensureTeamMembership({
+    profileId: user.id,
+    organizationId: organization.id,
+    role: "owner"
+  });
 
   redirect("/admin?bootstrapped=1");
 }

@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { Check, Circle, CircleDot, Pause } from "lucide-react";
+import { Check, ChevronDown, Circle, CircleDot, Pause } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusDot } from "@/components/shared/status-dot";
 import { getDocumentPhaseKeyForTimelinePhase } from "@/features/documents/phases";
-import { completeProjectPhase, startProjectPhase } from "@/features/projects/actions";
+import { updateProjectPhaseStatus } from "@/features/projects/actions";
 import { cn } from "@/lib/utils/cn";
 import type { DocumentPhaseKey, PhaseStatus, Project, ProjectPhase } from "@/types/domain";
 
@@ -43,6 +42,14 @@ const cardClasses: Record<PhaseVisualStatus, string> = {
   complete: "border-sky-200 bg-sky-50/70 shadow-sm",
   paused: "border-amber-300 bg-amber-50/75 shadow-sm ring-1 ring-amber-100"
 };
+
+const phaseStatusLabels: Record<PhaseStatus, string> = {
+  not_started: "Not started",
+  active: "In progress",
+  complete: "Complete"
+};
+
+const phaseStatusOptions: PhaseStatus[] = ["not_started", "active", "complete"];
 
 function getVisualStatus(phase: ProjectPhase, isProjectPaused?: boolean): PhaseVisualStatus {
   if (phase.status === "active" && isProjectPaused) {
@@ -110,32 +117,55 @@ function PhaseStatusIcon({ status }: { status: PhaseVisualStatus }) {
   return <Circle className={className} aria-hidden="true" />;
 }
 
-function PhaseActions({ phase, projectId }: { phase: ProjectPhase; projectId?: string }) {
-  if (!projectId) {
-    return null;
+function TimelineStatusBadge({
+  phase,
+  projectId,
+  status,
+  mode
+}: {
+  phase: ProjectPhase;
+  projectId?: string;
+  status: PhaseVisualStatus;
+  mode: "readonly" | "admin";
+}) {
+  const label = status === "paused" ? "Paused" : phaseStatusLabels[status];
+
+  if (mode !== "admin" || !projectId || status === "paused") {
+    return <Badge tone={statusTone[status]}>{label}</Badge>;
   }
 
+  const otherStatuses = phaseStatusOptions.filter((option) => option !== phase.status);
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {phase.status === "active" ? (
-        <form action={completeProjectPhase}>
-          <input type="hidden" name="projectId" value={projectId} />
-          <input type="hidden" name="phaseId" value={phase.id} />
-          <Button variant="outline" className="h-8 px-3 text-xs">
-            Complete
-          </Button>
-        </form>
-      ) : null}
-      {phase.status !== "active" ? (
-        <form action={startProjectPhase}>
-          <input type="hidden" name="projectId" value={projectId} />
-          <input type="hidden" name="phaseId" value={phase.id} />
-          <Button variant="outline" className="h-8 px-3 text-xs">
-            {phase.status === "complete" ? "Reopen" : "Set active"}
-          </Button>
-        </form>
-      ) : null}
-    </div>
+    <details className="group relative w-fit">
+      <summary className="list-none marker:hidden">
+        <span className="inline-flex cursor-pointer items-center gap-1 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+          <Badge tone={statusTone[status]}>{label}</Badge>
+          <ChevronDown className="size-3 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+        </span>
+      </summary>
+      <form action={updateProjectPhaseStatus} className="absolute right-0 top-full z-30 mt-2 w-40 rounded-md border bg-background p-1 text-left shadow-lg md:left-1/2 md:right-auto md:-translate-x-1/2">
+        <input type="hidden" name="projectId" value={projectId} />
+        <input type="hidden" name="phaseId" value={phase.id} />
+        {otherStatuses.map((option) => (
+          <button
+            key={option}
+            type="submit"
+            name="status"
+            value={option}
+            className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <span>{phaseStatusLabels[option]}</span>
+            <span
+              className={cn(
+                "size-2 rounded-full",
+                option === "active" ? "bg-emerald-500" : option === "complete" ? "bg-sky-500" : "bg-muted-foreground/40"
+              )}
+            />
+          </button>
+        ))}
+      </form>
+    </details>
   );
 }
 
@@ -194,7 +224,6 @@ export function MacroTimeline({
   mode = "readonly",
   selectedPhaseKey = null
 }: MacroTimelineProps) {
-  const canManage = mode === "admin" && Boolean(projectId);
   const sortedPhases = phases.slice().sort((a, b) => a.position - b.position);
 
   if (displayMode === "nodes") {
@@ -247,15 +276,8 @@ export function MacroTimeline({
                       <Link href={href} className="inline-block rounded-sm text-sm font-semibold leading-5 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                         {phase.name}
                       </Link>
-                      <Badge tone={statusTone[visualStatus]} className="w-fit md:self-center">
-                        {visualStatus}
-                      </Badge>
+                      <TimelineStatusBadge phase={phase} projectId={projectId} status={visualStatus} mode={mode} />
                     </div>
-                    {canManage ? (
-                      <div className="flex md:justify-center">
-                        <PhaseActions phase={phase} projectId={projectId} />
-                      </div>
-                    ) : null}
                   </div>
                 </li>
               );
@@ -291,13 +313,8 @@ export function MacroTimeline({
                       <StatusDot tone={visualStatus === "active" ? "active" : visualStatus === "complete" ? "review" : "neutral"} />
                       <span className="truncate text-sm font-medium">{phase.name}</span>
                     </Link>
-                    <Badge tone={statusTone[visualStatus]}>{visualStatus}</Badge>
+                    <TimelineStatusBadge phase={phase} projectId={projectId} status={visualStatus} mode={mode} />
                   </div>
-                  {canManage ? (
-                    <div className="flex flex-wrap gap-2 border-t pt-3">
-                      <PhaseActions phase={phase} projectId={projectId} />
-                    </div>
-                  ) : null}
                 </div>
               </li>
             );

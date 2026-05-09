@@ -8,6 +8,7 @@ export type PhaseStatus = "not_started" | "active" | "complete";
 export type DeliverableStatus =
   | "planned"
   | "in_progress"
+  | "editing"
   | "ready_for_review"
   | "revision_requested"
   | "approved"
@@ -37,6 +38,7 @@ export type Deliverable = {
   type: string;
   status: DeliverableStatus;
   expectedDeliveryDate: string | null;
+  expectedDeliveryDateChangedForRevision: boolean;
   revisionLimit: number;
   revisionsRemaining: number;
   externalUrl: string | null;
@@ -89,6 +91,7 @@ export type ProjectTemplate = {
 
 export type Project = {
   id: string;
+  organizationId?: string;
   name: string;
   clientName: string;
   clientEmail?: string;

@@ -142,7 +142,7 @@ export function ServiceTemplateBuilderForm({ source = "templates" }: ServiceTemp
   const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
   const [isLibraryDropActive, setIsLibraryDropActive] = useState(false);
   const [newPhaseName, setNewPhaseName] = useState("");
-  const [newPhaseAllowsDocuments, setNewPhaseAllowsDocuments] = useState(false);
+  const [newPhaseAllowsDocuments, setNewPhaseAllowsDocuments] = useState(true);
 
   const availablePhases = useMemo(
     () => phaseCatalog.filter((phase) => !timelinePhaseKeys.includes(phase.phaseKey)),
@@ -216,7 +216,7 @@ export function ServiceTemplateBuilderForm({ source = "templates" }: ServiceTemp
       }
     ]);
     setNewPhaseName("");
-    setNewPhaseAllowsDocuments(false);
+    setNewPhaseAllowsDocuments(true);
   };
 
   const cancelHref = source === "project-draft" ? "/admin/projects?resumeDraft=1" : "/admin/templates";
@@ -346,96 +346,100 @@ export function ServiceTemplateBuilderForm({ source = "templates" }: ServiceTemp
               <h2 className="text-sm font-semibold">Timeline</h2>
 
               {orderedTimelinePhases.length ? (
-                <div className="relative overflow-hidden rounded-xl border bg-muted/20 p-4">
-                  <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-                    <div className="absolute bottom-4 left-1/2 top-4 hidden w-[3px] -translate-x-1/2 overflow-hidden rounded-full bg-gradient-to-b from-slate-200 via-slate-300 to-slate-200 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)] md:hidden">
-                      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/80 opacity-80" />
-                      <span className="animate-template-flow-y absolute left-1/2 top-0 h-36 w-4 -translate-x-1/2 rounded-full bg-sky-300/95 shadow-[0_0_32px_rgba(56,189,248,1)] blur-[10px]" />
-                      <span className="animate-template-flow-y-core absolute left-1/2 top-0 h-20 w-1.5 -translate-x-1/2 rounded-full bg-white/95 shadow-[0_0_14px_rgba(255,255,255,0.95)] blur-[2px]" />
-                    </div>
-                    <div className="absolute left-6 right-6 top-1/2 hidden h-[3px] -translate-y-1/2 overflow-hidden rounded-full bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)] md:block">
-                      <span className="absolute inset-y-0 left-0 right-0 m-auto h-px bg-white/80 opacity-80" />
-                      <span className="animate-template-flow-x absolute left-0 top-1/2 h-5 w-44 -translate-y-1/2 rounded-full bg-sky-300/95 shadow-[0_0_32px_rgba(56,189,248,1)] blur-[11px]" />
-                      <span className="animate-template-flow-x-core absolute left-0 top-1/2 h-1.5 w-24 -translate-y-1/2 rounded-full bg-white/95 shadow-[0_0_14px_rgba(255,255,255,0.95)] blur-[2px]" />
-                    </div>
-                  </div>
-                  <div className="relative z-10 flex flex-col gap-3 md:flex-row md:items-stretch md:gap-3">
-                    <TimelineDropSlot
-                      active={activeSlotIndex === 0}
-                      onDragOver={(event) => {
-                        if (!draggedPhaseKey) {
-                          return;
-                        }
-
-                        event.preventDefault();
-                        setActiveSlotIndex(0);
-                        setIsLibraryDropActive(false);
-                      }}
-                      onDrop={() => handleDropIntoTimeline(0)}
-                      label="Insert before the first phase"
-                      stretch
-                    />
-                    {orderedTimelinePhases.map((phase, index) => (
-                      <Fragment key={phase.phaseKey}>
-                        <div
-                          draggable
-                          onDragStart={() => setDraggedPhaseKey(phase.phaseKey)}
-                          onDragEnd={() => {
-                            setDraggedPhaseKey(null);
-                            setActiveSlotIndex(null);
-                            setIsLibraryDropActive(false);
-                          }}
-                          className="relative cursor-grab rounded-xl border bg-background p-4 shadow-sm active:cursor-grabbing md:w-[12.5rem] md:max-w-[12.5rem] md:flex-none"
-                        >
-                            <div className="flex h-full flex-col items-center justify-between gap-4 text-center">
-                            <div className="space-y-3">
-                              <span className="mx-auto flex size-11 items-center justify-center rounded-full border-2 border-sky-300 bg-sky-50 text-sky-800 shadow-sm ring-4 ring-sky-100">
-                                <GripVertical className="size-4" aria-hidden="true" />
-                              </span>
-                              <div className="space-y-1">
-                                <p className="text-sm font-semibold">{phase.name}</p>
-                                <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-                                  <span>{index + 1} in flow</span>
-                                  {phase.allowsDocuments ? (
-                                    <>
-                                      <span aria-hidden="true">/</span>
-                                      <DocumentsHint />
-                                    </>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap justify-center gap-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                className="h-8 w-8 p-0 text-red-700 hover:bg-red-50 hover:text-red-800"
-                                onClick={() => deletePhase(phase.phaseKey)}
-                                aria-label={`Delete ${phase.name}`}
-                                title={`Delete ${phase.name}`}
-                              >
-                                <Trash2 className="size-3.5" />
-                              </Button>
-                            </div>
-                          </div>
+                <div className="rounded-xl border bg-muted/20 p-4">
+                  <div className="overflow-x-auto overflow-y-visible pb-2">
+                    <div className="relative min-w-full md:w-max">
+                      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+                        <div className="absolute bottom-4 left-1/2 top-4 hidden w-[3px] -translate-x-1/2 overflow-hidden rounded-full bg-gradient-to-b from-slate-200 via-slate-300 to-slate-200 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)] md:hidden">
+                          <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/80 opacity-80" />
+                          <span className="animate-template-flow-y absolute left-1/2 top-0 h-36 w-4 -translate-x-1/2 rounded-full bg-sky-300/95 shadow-[0_0_32px_rgba(56,189,248,1)] blur-[10px]" />
+                          <span className="animate-template-flow-y-core absolute left-1/2 top-0 h-20 w-1.5 -translate-x-1/2 rounded-full bg-white/95 shadow-[0_0_14px_rgba(255,255,255,0.95)] blur-[2px]" />
                         </div>
+                        <div className="absolute left-6 right-6 top-1/2 hidden h-[3px] -translate-y-1/2 overflow-hidden rounded-full bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)] md:block">
+                          <span className="absolute inset-y-0 left-0 right-0 m-auto h-px bg-white/80 opacity-80" />
+                          <span className="animate-template-flow-x absolute left-0 top-1/2 h-5 w-44 -translate-y-1/2 rounded-full bg-sky-300/95 shadow-[0_0_32px_rgba(56,189,248,1)] blur-[11px]" />
+                          <span className="animate-template-flow-x-core absolute left-0 top-1/2 h-1.5 w-24 -translate-y-1/2 rounded-full bg-white/95 shadow-[0_0_14px_rgba(255,255,255,0.95)] blur-[2px]" />
+                        </div>
+                      </div>
+                      <div className="relative z-10 flex flex-col gap-3 md:flex-row md:items-stretch md:gap-3">
                         <TimelineDropSlot
-                          active={activeSlotIndex === index + 1}
+                          active={activeSlotIndex === 0}
                           onDragOver={(event) => {
                             if (!draggedPhaseKey) {
                               return;
                             }
 
                             event.preventDefault();
-                            setActiveSlotIndex(index + 1);
+                            setActiveSlotIndex(0);
                             setIsLibraryDropActive(false);
                           }}
-                          onDrop={() => handleDropIntoTimeline(index + 1)}
-                          label={`Insert after ${phase.name}`}
-                          stretch={index === orderedTimelinePhases.length - 1}
+                          onDrop={() => handleDropIntoTimeline(0)}
+                          label="Insert before the first phase"
+                          stretch
                         />
-                      </Fragment>
-                    ))}
+                        {orderedTimelinePhases.map((phase, index) => (
+                          <Fragment key={phase.phaseKey}>
+                            <div
+                              draggable
+                              onDragStart={() => setDraggedPhaseKey(phase.phaseKey)}
+                              onDragEnd={() => {
+                                setDraggedPhaseKey(null);
+                                setActiveSlotIndex(null);
+                                setIsLibraryDropActive(false);
+                              }}
+                              className="relative cursor-grab rounded-xl border bg-background p-4 shadow-sm active:cursor-grabbing md:w-[12.5rem] md:max-w-[12.5rem] md:flex-none"
+                            >
+                              <div className="flex h-full flex-col items-center justify-between gap-4 text-center">
+                                <div className="space-y-3">
+                                  <span className="mx-auto flex size-11 items-center justify-center rounded-full border-2 border-sky-300 bg-sky-50 text-sky-800 shadow-sm ring-4 ring-sky-100">
+                                    <GripVertical className="size-4" aria-hidden="true" />
+                                  </span>
+                                  <div className="space-y-1">
+                                    <p className="text-sm font-semibold">{phase.name}</p>
+                                    <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+                                      <span>{index + 1} in flow</span>
+                                      {phase.allowsDocuments ? (
+                                        <>
+                                          <span aria-hidden="true">/</span>
+                                          <DocumentsHint />
+                                        </>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap justify-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-red-700 hover:bg-red-50 hover:text-red-800"
+                                    onClick={() => deletePhase(phase.phaseKey)}
+                                    aria-label={`Delete ${phase.name}`}
+                                    title={`Delete ${phase.name}`}
+                                  >
+                                    <Trash2 className="size-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                            <TimelineDropSlot
+                              active={activeSlotIndex === index + 1}
+                              onDragOver={(event) => {
+                                if (!draggedPhaseKey) {
+                                  return;
+                                }
+
+                                event.preventDefault();
+                                setActiveSlotIndex(index + 1);
+                                setIsLibraryDropActive(false);
+                              }}
+                              onDrop={() => handleDropIntoTimeline(index + 1)}
+                              label={`Insert after ${phase.name}`}
+                              stretch={index === orderedTimelinePhases.length - 1}
+                            />
+                          </Fragment>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (

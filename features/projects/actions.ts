@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ensureClientMembership } from "@/features/auth/access";
 import { DEFAULT_DOCUMENT_PHASE_KEY, normalizeDocumentPhaseKey } from "@/features/documents/phases";
+import { getProjectCreationLimitState } from "@/features/plans/usage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { TemplatePhaseDefinition } from "@/types/domain";
+import type { DeliverableStatus, TemplatePhaseDefinition } from "@/types/domain";
 import { phaseKeyFromName, templatePhaseDefinitionsFromDefault } from "./template-phases";
 
 const uuidSchema = z.string().uuid();
@@ -14,6 +15,16 @@ const responsibilityOwnerSchema = z.enum(["agency", "client", "external", "share
 const documentPhaseSchema = z
   .string()
   .transform((value) => normalizeDocumentPhaseKey(value) ?? DEFAULT_DOCUMENT_PHASE_KEY);
+const deliveryStateSchema = z.enum(["planned", "in_progress", "editing"]);
+const deliverableStatusSchema = z.enum([
+  "planned",
+  "in_progress",
+  "editing",
+  "ready_for_review",
+  "revision_requested",
+  "approved",
+  "delivered"
+]);
 
 const draftProjectSchema = z.object({
   projectName: z.string().min(2).max(120),
@@ -31,9 +42,29 @@ const deliverableSchema = z.object({
   title: z.string().min(2).max(160),
   deliverableType: z.string().min(2).max(80),
   expectedDeliveryDate: z.string().optional(),
+  deliveryState: deliveryStateSchema.default("planned"),
   revisionLimit: z.coerce.number().int().min(0).max(20).default(2),
   externalUrl: z.string().url().optional().or(z.literal("")),
   internalNotes: z.string().max(1000).optional()
+});
+
+const deliverableExpectedDeliveryDateSchema = z.object({
+  deliverableId: uuidSchema,
+  projectId: uuidSchema,
+  expectedDeliveryDate: z.string().optional(),
+  changedForRevision: z.boolean()
+});
+
+const deliverableDeliveryStateSchema = z.object({
+  deliverableId: uuidSchema,
+  projectId: uuidSchema,
+  deliveryState: deliveryStateSchema
+});
+
+const deliverableStatusUpdateSchema = z.object({
+  deliverableId: uuidSchema,
+  projectId: uuidSchema,
+  status: deliverableStatusSchema
 });
 
 const deliverableLinkSchema = z.object({
@@ -76,6 +107,10 @@ const archiveProjectSchema = z.object({
 const phaseActionSchema = z.object({
   projectId: uuidSchema,
   phaseId: uuidSchema
+});
+
+const phaseStatusActionSchema = phaseActionSchema.extend({
+  status: z.enum(["not_started", "active", "complete"])
 });
 
 const responsibilitySchema = z.object({
@@ -143,11 +178,32 @@ async function getTeamContext() {
     redirect(`/admin?error=${encodeURIComponent("Unable to load your profile. Has the schema been applied?")}`);
   }
 
-  if (!profile || profile.user_type !== "team" || !profile.organization_id) {
-    redirect(`/admin?error=${encodeURIComponent("Your user needs a team profile with an organization before managing projects.")}`);
+  const { data: membership, error: membershipError } = await (supabase as any)
+    .from("organization_members")
+    .select("organization_id,role,status")
+    .eq("profile_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (membershipError) {
+    redirect(`/admin?error=${encodeURIComponent("Unable to load your organization access.")}`);
   }
 
-  return { supabase, user, profile };
+  if (!profile || profile.user_type !== "team" || !membership?.organization_id) {
+    redirect(`/admin?error=${encodeURIComponent("Your user needs a team membership before managing projects.")}`);
+  }
+
+  return {
+    supabase,
+    user,
+    profile: {
+      ...profile,
+      organization_id: membership.organization_id,
+      team_role: membership.role
+    }
+  };
 }
 
 async function getProjectOrganization(projectId: string) {
@@ -428,6 +484,19 @@ export async function createDraftProject(formData: FormData) {
   }
 
   const { supabase, user, profile } = await getTeamContext();
+  let limitState: Awaited<ReturnType<typeof getProjectCreationLimitState>>;
+
+  try {
+    limitState = await getProjectCreationLimitState(supabase, profile.organization_id!);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to check the organization project limit.";
+    redirect(`/admin/projects?error=${encodeURIComponent(message)}`);
+  }
+
+  if (!limitState.canCreateProject) {
+    redirect(`/admin/projects?error=${encodeURIComponent(limitState.limitError ?? "Project limit reached.")}&limit=projects`);
+  }
+
   const phaseRows = toProjectPhaseRows(await getDefaultPhaseDefinitionsForTemplate(supabase, parsed.data.templateId || undefined));
   const firstPhaseKey = phaseRows[0]?.phase_key ?? "onboarding";
 
@@ -787,6 +856,101 @@ export async function completeProjectPhase(formData: FormData) {
   redirect(`/admin/projects/${parsed.data.projectId}?updated=timeline-completed`);
 }
 
+export async function resetProjectPhase(formData: FormData) {
+  const parsed = phaseActionSchema.safeParse({
+    projectId: formData.get("projectId"),
+    phaseId: formData.get("phaseId")
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects?error=${encodeURIComponent("Timeline action is missing project context.")}`);
+  }
+
+  const { supabase, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Restore the project before changing the timeline.")}`);
+  }
+
+  try {
+    const phases = await getOrderedProjectPhases(supabase, parsed.data.projectId);
+    const phase = phases.find((item) => item.id === parsed.data.phaseId);
+
+    if (!phase) {
+      throw new Error("Timeline phase not found.");
+    }
+
+    if (phase.status === "not_started") {
+      throw new Error("This timeline phase is already not started.");
+    }
+
+    const { error } = await supabase
+      .from("project_phases")
+      .update({ status: "not_started" })
+      .eq("id", parsed.data.phaseId)
+      .eq("project_id", parsed.data.projectId);
+
+    if (error) {
+      throw error;
+    }
+
+    await updateProjectCurrentPhase(supabase, parsed.data.projectId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to update the timeline.";
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=timeline-reset`);
+}
+
+export async function updateProjectPhaseStatus(formData: FormData) {
+  const parsed = phaseStatusActionSchema.safeParse({
+    projectId: formData.get("projectId"),
+    phaseId: formData.get("phaseId"),
+    status: formData.get("status")
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects?error=${encodeURIComponent("Timeline action is missing project context.")}`);
+  }
+
+  const { supabase, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Restore the project before changing the timeline.")}`);
+  }
+
+  try {
+    const phases = await getOrderedProjectPhases(supabase, parsed.data.projectId);
+    const phase = phases.find((item) => item.id === parsed.data.phaseId);
+
+    if (!phase) {
+      throw new Error("Timeline phase not found.");
+    }
+
+    const { error } = await supabase
+      .from("project_phases")
+      .update({ status: parsed.data.status })
+      .eq("id", parsed.data.phaseId)
+      .eq("project_id", parsed.data.projectId);
+
+    if (error) {
+      throw error;
+    }
+
+    await updateProjectCurrentPhase(supabase, parsed.data.projectId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to update the timeline.";
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=timeline-status-updated`);
+}
+
 export async function pauseProject(formData: FormData) {
   const projectId = uuidSchema.parse(formData.get("projectId"));
   const { supabase, project } = await getProjectOrganization(projectId);
@@ -1117,6 +1281,7 @@ export async function createDeliverable(formData: FormData) {
     title: formData.get("title"),
     deliverableType: formData.get("deliverableType"),
     expectedDeliveryDate: formData.get("expectedDeliveryDate"),
+    deliveryState: formData.get("deliveryState") || "planned",
     revisionLimit: formData.get("revisionLimit"),
     externalUrl: formData.get("externalUrl"),
     internalNotes: formData.get("internalNotes")
@@ -1147,7 +1312,7 @@ export async function createDeliverable(formData: FormData) {
     revisions_remaining: parsed.data.revisionLimit,
     external_url: parsed.data.externalUrl || null,
     internal_notes: parsed.data.internalNotes || null,
-    status: parsed.data.externalUrl ? "ready_for_review" : "planned"
+    status: parsed.data.externalUrl ? "ready_for_review" : parsed.data.deliveryState
   });
 
   if (error) {
@@ -1210,15 +1375,151 @@ export async function updateDeliverableLink(formData: FormData) {
     redirect(`/admin/projects/${formData.get("projectId")}?error=${encodeURIComponent("Enter a valid deliverable link.")}`);
   }
 
-  const { supabase, project } = await getProjectOrganization(parsed.data.projectId);
+  const { supabase, profile, project } = await getProjectOrganization(parsed.data.projectId);
 
   if (isProjectArchived(project)) {
     redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Archived projects are read-only. Restore the project before editing links.")}`);
   }
 
+  const { data: deliverable, error: deliverableError } = await supabase
+    .from("deliverables")
+    .select("title,status,external_url")
+    .eq("id", parsed.data.deliverableId)
+    .eq("project_id", parsed.data.projectId)
+    .single();
+
+  if (deliverableError || !deliverable) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Deliverable not found.")}`);
+  }
+
+  const shouldMoveToReview =
+    Boolean(parsed.data.externalUrl) &&
+    (["planned", "in_progress", "editing"] as DeliverableStatus[]).includes(deliverable.status);
+
   const { error } = await supabase
     .from("deliverables")
-    .update({ external_url: parsed.data.externalUrl || null })
+    .update({
+      external_url: parsed.data.externalUrl || null,
+      ...(shouldMoveToReview ? { status: "ready_for_review" } : {})
+    })
+    .eq("id", parsed.data.deliverableId)
+    .eq("project_id", parsed.data.projectId);
+
+  if (error) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (shouldMoveToReview) {
+    await supabase.from("notification_events").insert({
+      organization_id: profile.organization_id!,
+      project_id: parsed.data.projectId,
+      client_id: project.client_id,
+      deliverable_id: parsed.data.deliverableId,
+      event_type: "deliverable_ready_for_review",
+      payload: { title: deliverable.title }
+    });
+  }
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=deliverable-link-updated`);
+}
+
+export async function updateDeliverableExpectedDeliveryDate(formData: FormData) {
+  const parsed = deliverableExpectedDeliveryDateSchema.safeParse({
+    deliverableId: formData.get("deliverableId"),
+    projectId: formData.get("projectId"),
+    expectedDeliveryDate: formData.get("expectedDeliveryDate") || undefined,
+    changedForRevision: formData.get("changedForRevision") === "1"
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects/${formData.get("projectId")}?error=${encodeURIComponent("Check the expected delivery date form.")}`);
+  }
+
+  const { supabase, profile, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Archived projects are read-only. Restore the project before editing delivery dates.")}`);
+  }
+
+  const { data: deliverable, error: deliverableError } = await supabase
+    .from("deliverables")
+    .select("title")
+    .eq("id", parsed.data.deliverableId)
+    .eq("project_id", parsed.data.projectId)
+    .single();
+
+  if (deliverableError || !deliverable) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Deliverable not found.")}`);
+  }
+
+  const { error } = await supabase
+    .from("deliverables")
+    .update({
+      expected_delivery_date: parsed.data.expectedDeliveryDate || null,
+      expected_delivery_date_changed_for_revision: parsed.data.changedForRevision
+    })
+    .eq("id", parsed.data.deliverableId)
+    .eq("project_id", parsed.data.projectId);
+
+  if (error) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await supabase.from("notification_events").insert({
+    organization_id: profile.organization_id!,
+    project_id: parsed.data.projectId,
+    client_id: project.client_id,
+    deliverable_id: parsed.data.deliverableId,
+    event_type: "due_date_changed",
+    payload: {
+      title: deliverable.title,
+      expected_delivery_date: parsed.data.expectedDeliveryDate || null,
+      changed_for_revision: parsed.data.changedForRevision
+    }
+  });
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=deliverable-date-updated`);
+}
+
+export async function updateDeliverableDeliveryState(formData: FormData) {
+  const parsed = deliverableDeliveryStateSchema.safeParse({
+    deliverableId: formData.get("deliverableId"),
+    projectId: formData.get("projectId"),
+    deliveryState: formData.get("deliveryState")
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects/${formData.get("projectId")}?error=${encodeURIComponent("Choose a valid delivery state.")}`);
+  }
+
+  const { supabase, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Archived projects are read-only. Restore the project before editing delivery state.")}`);
+  }
+
+  const { data: deliverable, error: deliverableError } = await supabase
+    .from("deliverables")
+    .select("external_url,status")
+    .eq("id", parsed.data.deliverableId)
+    .eq("project_id", parsed.data.projectId)
+    .single();
+
+  if (deliverableError || !deliverable) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Deliverable not found.")}`);
+  }
+
+  if (deliverable.external_url || !(["planned", "in_progress", "editing"] as DeliverableStatus[]).includes(deliverable.status)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Delivery state is only used before a file link is attached.")}`);
+  }
+
+  const { error } = await supabase
+    .from("deliverables")
+    .update({ status: parsed.data.deliveryState })
     .eq("id", parsed.data.deliverableId)
     .eq("project_id", parsed.data.projectId);
 
@@ -1228,7 +1529,77 @@ export async function updateDeliverableLink(formData: FormData) {
 
   revalidatePath(`/admin/projects/${parsed.data.projectId}`);
   revalidatePath(`/portal/project/${parsed.data.projectId}`);
-  redirect(`/admin/projects/${parsed.data.projectId}?updated=deliverable-link-updated`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=deliverable-state-updated`);
+}
+
+export async function updateDeliverableStatus(formData: FormData) {
+  const parsed = deliverableStatusUpdateSchema.safeParse({
+    deliverableId: formData.get("deliverableId"),
+    projectId: formData.get("projectId"),
+    status: formData.get("status")
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/projects/${formData.get("projectId")}?error=${encodeURIComponent("Choose a valid deliverable status.")}`);
+  }
+
+  const { supabase, profile, project } = await getProjectOrganization(parsed.data.projectId);
+
+  if (isProjectArchived(project)) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Archived projects are read-only. Restore the project before changing deliverable status.")}`);
+  }
+
+  const { data: deliverable, error: deliverableError } = await supabase
+    .from("deliverables")
+    .select("title,status")
+    .eq("id", parsed.data.deliverableId)
+    .eq("project_id", parsed.data.projectId)
+    .single();
+
+  if (deliverableError || !deliverable) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent("Deliverable not found.")}`);
+  }
+
+  const nextApprovalFields =
+    parsed.data.status === "approved"
+      ? {
+          approved_at: new Date().toISOString(),
+          approved_by: profile.id,
+          approval_source: "admin_override"
+        }
+      : {
+          approved_at: null,
+          approved_by: null,
+          approval_source: null
+        };
+
+  const { error } = await supabase
+    .from("deliverables")
+    .update({
+      status: parsed.data.status,
+      ...nextApprovalFields
+    })
+    .eq("id", parsed.data.deliverableId)
+    .eq("project_id", parsed.data.projectId);
+
+  if (error) {
+    redirect(`/admin/projects/${parsed.data.projectId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (parsed.data.status === "ready_for_review" && deliverable.status !== "ready_for_review") {
+    await supabase.from("notification_events").insert({
+      organization_id: profile.organization_id!,
+      project_id: parsed.data.projectId,
+      client_id: project.client_id,
+      deliverable_id: parsed.data.deliverableId,
+      event_type: "deliverable_ready_for_review",
+      payload: { title: deliverable.title, source: "status_menu" }
+    });
+  }
+
+  revalidatePath(`/admin/projects/${parsed.data.projectId}`);
+  revalidatePath(`/portal/project/${parsed.data.projectId}`);
+  redirect(`/admin/projects/${parsed.data.projectId}?updated=deliverable-status-updated`);
 }
 
 export async function logManualRevision(formData: FormData) {

@@ -3,19 +3,19 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { resolveLoginAccess } from "@/features/auth/access";
-import { buildAuthCallbackUrl, getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
+import { buildRequestSignInCallbackUrl, getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const loginSchema = z.object({
   email: z.string().email(),
-  next: z.string().default("/portal")
+  next: z.string().default("/")
 });
 
 export async function sendMagicLink(formData: FormData) {
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
-    next: formData.get("next") || "/portal"
+    next: formData.get("next") || "/"
   });
 
   if (!parsed.success) {
@@ -34,7 +34,7 @@ export async function sendMagicLink(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(access.reason ?? "access-not-enabled")}`);
   }
 
-  const redirectTo = buildAuthCallbackUrl(access.next);
+  const redirectTo = await buildRequestSignInCallbackUrl(access.next);
 
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
@@ -55,7 +55,7 @@ export async function sendMagicLink(formData: FormData) {
 export async function createDevSignInLink(formData: FormData) {
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
-    next: formData.get("next") || "/admin/bootstrap"
+    next: formData.get("next") || "/"
   });
 
   if (!parsed.success) {
@@ -76,7 +76,7 @@ export async function createDevSignInLink(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(access.reason ?? "access-not-enabled")}`);
   }
 
-  const redirectTo = buildAuthCallbackUrl(access.next);
+  const redirectTo = await buildRequestSignInCallbackUrl(access.next);
 
   const firstAttempt = await service.auth.admin.generateLink({
     type: "magiclink",

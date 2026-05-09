@@ -1,4 +1,5 @@
 import { Mail } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
@@ -13,7 +14,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = searchParams ? await searchParams : {};
   const status = typeof params.status === "string" ? params.status : null;
   const error = typeof params.error === "string" ? params.error : null;
-  const next = typeof params.next === "string" ? params.next : "/portal";
+  const next = typeof params.next === "string" ? params.next : "/";
   const appUrl = getCanonicalAppUrl();
   const showDevLink = process.env.NODE_ENV !== "production" && isLocalAppUrl(appUrl);
 
@@ -27,7 +28,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </span>
             <div>
               <h1 className="text-lg font-semibold">Sign in by email</h1>
-              <p className="text-sm text-muted-foreground">Clients and team users use secure magic links.</p>
+              <p className="text-sm text-muted-foreground">Use the email connected to your agency or client portal.</p>
             </div>
           </div>
         </CardHeader>
@@ -51,7 +52,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </form>
           {showDevLink ? (
             <form action={createDevSignInLink} className="mt-3 space-y-3 border-t pt-3">
-              <input type="hidden" name="next" value={next === "/portal" ? "/admin/bootstrap" : next} />
+              <input type="hidden" name="next" value={next} />
               <label className="block space-y-2">
                 <span className="text-sm font-medium">Local dev sign-in</span>
                 <input
@@ -93,12 +94,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           ) : error === "admin-access-required" ? (
             <p className="mt-4 text-sm text-red-700">This account does not have team access.</p>
           ) : error === "client-access-required" || error === "client-membership-required" ? (
-            <p className="mt-4 text-sm text-red-700">This account is not connected to a client portal membership.</p>
+            <p className="mt-4 text-sm text-red-700">This account is not connected to an agency or client portal yet.</p>
           ) : error === "team-profile-incomplete" ? (
             <p className="mt-4 text-sm text-red-700">This team account is missing organization access.</p>
           ) : error ? (
             <p className="mt-4 text-sm text-red-700">Unable to complete sign-in. Error: {error}</p>
           ) : null}
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            New agency?{" "}
+            <Link href="/register" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Create an agency
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </main>

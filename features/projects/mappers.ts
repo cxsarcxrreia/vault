@@ -34,6 +34,7 @@ export function mapDeliverable(
     type: row.deliverable_type,
     status: row.status,
     expectedDeliveryDate: row.expected_delivery_date,
+    expectedDeliveryDateChangedForRevision: row.expected_delivery_date_changed_for_revision,
     revisionLimit: row.revision_limit,
     revisionsRemaining: row.revisions_remaining,
     externalUrl: row.external_url,
@@ -90,6 +91,7 @@ export function mapProject(
 
   return {
     id: row.id,
+    organizationId: row.organization_id,
     name: row.name,
     clientName: client?.name ?? "Client",
     clientEmail: client?.primary_contact_email,

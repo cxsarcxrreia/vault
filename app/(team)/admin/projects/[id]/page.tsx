@@ -7,6 +7,7 @@ import { DocumentList } from "@/components/documents/document-list";
 import { ProjectActivationPanel } from "@/components/project/project-activation-panel";
 import { ProjectCompletionSummary } from "@/components/project/project-completion-summary";
 import { ProjectManageMenu } from "@/components/project/project-manage-menu";
+import { RecentAdminProjectTracker } from "@/components/project/recent-project-tracker";
 import { ProjectSummary } from "@/components/project/project-summary";
 import { MacroTimeline, MacroTimelineViewToggle, type MacroTimelineDisplayMode } from "@/components/project/timeline";
 import { ResponsibilityList } from "@/components/responsibilities/responsibility-list";
@@ -15,6 +16,7 @@ import { SetupRequired } from "@/components/shared/setup-required";
 import { getDocumentPhaseOrderForProjectPhases, normalizeDocumentPhaseKey } from "@/features/documents/phases";
 import { getProjectDetail } from "@/features/projects/queries";
 import { getResponsibilityPresetsForTemplate } from "@/features/projects/responsibilities";
+import { getMainProjectState } from "@/features/projects/state";
 
 type ProjectPageProps = {
   params: Promise<{ id: string }>;
@@ -23,11 +25,14 @@ type ProjectPageProps = {
 
 const sectionUpdates: Record<string, string[]> = {
   activation: ["deal-status", "payment-confirmed", "activated", "client-access-synced"],
-  timeline: ["timeline-started", "timeline-completed"],
+  timeline: ["timeline-started", "timeline-completed", "timeline-reset", "timeline-status-updated"],
   deliverables: [
     "deliverable-created",
     "deliverable-deleted",
     "deliverable-link-updated",
+    "deliverable-date-updated",
+    "deliverable-state-updated",
+    "deliverable-status-updated",
     "manual-revision-logged",
     "deliverable-resubmitted",
     "approved-on-behalf",
@@ -82,6 +87,14 @@ export default async function AdminProjectPage({ params, searchParams }: Project
           <FormMessage type="error">{result.error ?? "Project not found."}</FormMessage>
         ) : (
           <>
+        <RecentAdminProjectTracker
+          project={{
+            id: project.id,
+            name: project.name,
+            state: getMainProjectState(project),
+            organizationId: project.organizationId
+          }}
+        />
         <div id="project-summary" className="scroll-mt-6">
           <ProjectSummary project={project} actions={<ProjectManageMenu project={project} />} />
         </div>

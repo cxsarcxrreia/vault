@@ -23,7 +23,14 @@ function normalizeRelativePath(path: string) {
 }
 
 export function getCanonicalAppUrl() {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  return getConfiguredAppUrl();
+}
+
+export function getConfiguredAppUrl() {
+  const configured =
+    process.env.APP_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    LOCAL_APP_URL;
 
   if (!configured || !isHttpUrl(configured)) {
     return LOCAL_APP_URL;
@@ -32,10 +39,14 @@ export function getCanonicalAppUrl() {
   return trimTrailingSlash(configured);
 }
 
+function isLocalHost(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
 export function isLocalAppUrl(appUrl = getCanonicalAppUrl()) {
   try {
     const { hostname } = new URL(appUrl);
-    return hostname === "localhost" || hostname === "127.0.0.1";
+    return isLocalHost(hostname);
   } catch {
     return true;
   }
@@ -50,4 +61,30 @@ export function buildAuthCallbackUrl(next = DEFAULT_POST_LOGIN_PATH) {
   }
 
   return callbackUrl.toString();
+}
+
+export function buildAgencyRegistrationCallbackUrl() {
+  return new URL("/api/auth/register-callback", getCanonicalAppUrl()).toString();
+}
+
+export async function buildRequestAgencyRegistrationCallbackUrl() {
+  return buildAgencyRegistrationCallbackUrl();
+}
+
+export function buildSignInCallbackUrl(next = DEFAULT_POST_LOGIN_PATH) {
+  const normalizedNext = normalizeRelativePath(next);
+
+  if (normalizedNext.startsWith("/admin") && !normalizedNext.startsWith("/admin/bootstrap")) {
+    return new URL("/api/auth/admin-callback", getCanonicalAppUrl()).toString();
+  }
+
+  if (normalizedNext.startsWith("/portal")) {
+    return new URL("/api/auth/portal-callback", getCanonicalAppUrl()).toString();
+  }
+
+  return buildAuthCallbackUrl(normalizedNext);
+}
+
+export async function buildRequestSignInCallbackUrl(next = DEFAULT_POST_LOGIN_PATH) {
+  return buildSignInCallbackUrl(next);
 }

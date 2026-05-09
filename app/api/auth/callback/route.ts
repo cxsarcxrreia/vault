@@ -12,8 +12,8 @@ function safeRelativePath(path: string | null, fallback = "/portal") {
 }
 
 export async function GET(request: NextRequest) {
-  const appUrl = getCanonicalAppUrl();
   const requestUrl = new URL(request.url);
+  const appUrl = getCanonicalAppUrl();
 
   const code = requestUrl.searchParams.get("code");
   const next = safeRelativePath(requestUrl.searchParams.get("next"), "/portal");
@@ -41,6 +41,10 @@ export async function GET(request: NextRequest) {
       isBootstrapEmailAllowed(user.email)
     ) {
       return NextResponse.redirect(new URL("/admin/bootstrap", appUrl));
+    }
+
+    if (user?.email && next.startsWith("/register/complete")) {
+      return NextResponse.redirect(new URL("/register/complete", appUrl));
     }
 
     const { data: profile } = user

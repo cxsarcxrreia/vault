@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ExternalLink, Pencil } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, ExternalLink, Pencil, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmSubmitButton } from "@/components/shared/confirm-submit-button";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -11,20 +11,92 @@ import {
   requestDeliverableRevision,
   resubmitDeliverable,
   undoDeliverableApproval,
-  updateDeliverableLink
+  updateDeliverableExpectedDeliveryDate,
+  updateDeliverableLink,
+  updateDeliverableStatus
 } from "@/features/projects/actions";
 import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/format";
-import type { Deliverable } from "@/types/domain";
+import type { Deliverable, DeliverableStatus } from "@/types/domain";
 
 const statusTone = {
   planned: "neutral",
   in_progress: "waiting",
-  ready_for_review: "review",
+  editing: "waiting",
+  ready_for_review: "waiting",
   revision_requested: "waiting",
   approved: "active",
   delivered: "active"
 } as const;
+
+const statusLabel = {
+  planned: "Not started",
+  in_progress: "In production",
+  editing: "Editing",
+  ready_for_review: "Awaiting Client's Review",
+  revision_requested: "Revision requested",
+  approved: "Approved",
+  delivered: "Delivered"
+} as const;
+
+const statusOptions: DeliverableStatus[] = [
+  "planned",
+  "in_progress",
+  "editing",
+  "revision_requested",
+];
+
+const lockedManualStatusStates = new Set<DeliverableStatus>([
+  "ready_for_review",
+  "revision_requested",
+  "approved",
+  "delivered"
+]);
+
+function DeliverableStatusBadge({
+  deliverable,
+  projectId,
+  mode,
+  label
+}: {
+  deliverable: Deliverable;
+  projectId?: string;
+  mode: "admin" | "client" | "readonly";
+  label: string;
+}) {
+  if (mode !== "admin" || !projectId || lockedManualStatusStates.has(deliverable.status)) {
+    return <Badge tone={statusTone[deliverable.status]}>{label}</Badge>;
+  }
+
+  const otherStatuses = statusOptions.filter((status) => status !== deliverable.status);
+
+  return (
+    <details className="group relative">
+      <summary className="list-none marker:hidden">
+        <span className="inline-flex cursor-pointer items-center gap-1 rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+          <Badge tone={statusTone[deliverable.status]}>{label}</Badge>
+          <ChevronDown className="size-3 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+        </span>
+      </summary>
+      <form action={updateDeliverableStatus} className="absolute right-0 top-full z-30 mt-2 w-52 rounded-md border bg-background p-1 shadow-lg">
+        <input type="hidden" name="projectId" value={projectId} />
+        <input type="hidden" name="deliverableId" value={deliverable.id} />
+        {otherStatuses.map((status) => (
+          <button
+            key={status}
+            type="submit"
+            name="status"
+            value={status}
+            className="flex w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <span>{statusLabel[status]}</span>
+            <span className={cn("size-2 rounded-full", statusTone[status] === "active" ? "bg-emerald-500" : statusTone[status] === "waiting" ? "bg-amber-500" : "bg-muted-foreground/40")} />
+          </button>
+        ))}
+      </form>
+    </details>
+  );
+}
 
 export function DeliverableCard({
   deliverable,
@@ -42,6 +114,10 @@ export function DeliverableCard({
   const isApproved = deliverable.status === "approved";
   const canRequestRevision = isReadyForClientReview && deliverable.revisionsRemaining > 0;
   const canApprove = isReadyForClientReview;
+  const badgeLabel =
+    mode === "client" && deliverable.status === "ready_for_review"
+      ? "Awaiting your review"
+      : statusLabel[deliverable.status];
 
   return (
     <Card>
@@ -51,7 +127,7 @@ export function DeliverableCard({
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{deliverable.type}</p>
             <h3 className="mt-1 font-semibold">{deliverable.title}</h3>
           </div>
-          <Badge tone={statusTone[deliverable.status]}>{deliverable.status.replaceAll("_", " ")}</Badge>
+          <DeliverableStatusBadge deliverable={deliverable} projectId={projectId} mode={mode} label={badgeLabel} />
         </div>
         <dl
           className={cn(
@@ -61,7 +137,18 @@ export function DeliverableCard({
         >
           <div>
             <dt className="font-medium text-foreground">Expected delivery</dt>
-            <dd>{formatDate(deliverable.expectedDeliveryDate)}</dd>
+            <dd className="mt-1 flex items-center gap-2">
+              <span>{formatDate(deliverable.expectedDeliveryDate)}</span>
+              {mode === "client" && deliverable.expectedDeliveryDateChangedForRevision ? (
+                <span className="group/tooltip relative inline-flex items-center text-amber-700">
+                  <TriangleAlert className="size-4" aria-hidden="true" />
+                  <span className="sr-only">Expected delivery date changed because of revision request</span>
+                  <span className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden w-64 -translate-x-1/2 rounded-md border bg-background px-3 py-2 text-left text-[11px] font-normal text-foreground shadow-lg group-hover/tooltip:block">
+                    Expected Date changed because a Revision was requested from your end.
+                  </span>
+                </span>
+              ) : null}
+            </dd>
           </div>
           <div>
             <dt className="font-medium text-foreground">Revisions</dt>
@@ -73,20 +160,28 @@ export function DeliverableCard({
         {deliverable.internalNotes && mode === "admin" ? (
           <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">{deliverable.internalNotes}</div>
         ) : null}
-        <div className="grid grid-cols-[repeat(2,max-content)_1fr] gap-2">
+        <div className="space-y-3">
           {deliverable.externalUrl ? (
-            <ButtonLink href={deliverable.externalUrl} variant="outline" target="_blank" rel="noreferrer">
+            <ButtonLink
+              href={deliverable.externalUrl}
+              variant="outline"
+              target="_blank"
+              rel="noreferrer"
+              className="border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100"
+            >
               <ExternalLink className="mr-2 size-4" />
               Open link
             </ButtonLink>
+          ) : mode === "client" ? (
+            <p className="text-sm font-medium text-sky-700">Asset link will appear here when ready.</p>
           ) : null}
           {mode === "admin" && projectId ? (
-            <details className="contents">
+            <details className="group rounded-md open:border open:p-3">
               <summary className="inline-flex h-10 cursor-pointer list-none items-center justify-center rounded-md border border-sky-200 bg-sky-50 px-3 text-sm font-medium text-sky-800 transition-colors hover:bg-sky-100 marker:hidden">
                 <Pencil className="mr-2 size-4" />
                 Edit link
               </summary>
-              <form action={updateDeliverableLink} className="col-span-full grid w-full gap-2 rounded-md border bg-muted/30 p-3 sm:grid-cols-[1fr_auto]">
+              <form action={updateDeliverableLink} className="mt-3 grid w-full gap-2 rounded-md bg-background sm:grid-cols-[1fr_auto]">
                 <input type="hidden" name="projectId" value={projectId} />
                 <input type="hidden" name="deliverableId" value={deliverable.id} />
                 <input
@@ -100,6 +195,40 @@ export function DeliverableCard({
               </form>
             </details>
           ) : null}
+          {mode === "admin" && projectId ? (
+            <details className="group rounded-md open:border open:p-3">
+              <summary className="inline-flex h-10 cursor-pointer list-none items-center justify-center rounded-md border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted marker:hidden">
+                <CalendarDays className="mr-2 size-4" />
+                Change delivery date
+              </summary>
+              <form action={updateDeliverableExpectedDeliveryDate} className="mt-3 grid w-full gap-3 rounded-md bg-background sm:grid-cols-[1fr_auto]">
+                <input type="hidden" name="projectId" value={projectId} />
+                <input type="hidden" name="deliverableId" value={deliverable.id} />
+                <div className="space-y-2">
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium">Expected delivery</span>
+                    <input
+                      name="expectedDeliveryDate"
+                      type="date"
+                      defaultValue={deliverable.expectedDeliveryDate ?? ""}
+                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input
+                      name="changedForRevision"
+                      value="1"
+                      type="checkbox"
+                      defaultChecked={deliverable.expectedDeliveryDateChangedForRevision}
+                      className="size-4 rounded border"
+                    />
+                    Changed because of a revision request
+                  </label>
+                </div>
+                <Button type="submit" variant="outline" className="self-end">Save date</Button>
+              </form>
+            </details>
+          ) : null}
         </div>
         {isRevisionPending ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -109,36 +238,45 @@ export function DeliverableCard({
         {mode === "client" && projectId ? (
           <div className="space-y-3 border-t pt-4">
             <h4 className="text-sm font-medium">Client actions</h4>
-            <div className="flex flex-wrap items-start gap-2">
+
+            <div className="space-y-3">
               {canRequestRevision ? (
-                <details className="group contents">
-                  <summary className="order-1 inline-flex h-10 cursor-pointer list-none items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/80 group-open:order-5 marker:hidden">
+                <details className="group rounded-md open:border open:p-3">
+                  <summary className="inline-flex h-10 cursor-pointer list-none items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/80 marker:hidden">
                     <span className="group-open:hidden">Request revision</span>
                     <span className="hidden group-open:inline">Hide</span>
                   </summary>
-                  <form action={requestDeliverableRevision} className="contents">
+
+                  <form
+                    action={requestDeliverableRevision}
+                    className="mt-3 space-y-3 rounded-md bg-background"
+                  >
                     <input type="hidden" name="projectId" value={projectId} />
                     <input type="hidden" name="deliverableId" value={deliverable.id} />
+
                     <textarea
                       name="body"
                       required
                       rows={3}
                       placeholder="Describe the requested revision"
-                      className="order-3 basis-full rounded-md border bg-background px-3 py-2 text-sm"
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                     />
-                    <Button type="submit" variant="secondary" className="order-4">
+
+                    <Button type="submit" variant="secondary">
                       Send revision request
                     </Button>
                   </form>
                 </details>
               ) : (
-                <Button type="button" variant="secondary" className="order-1" disabled>
+                <Button type="button" variant="secondary" className="w-fit" disabled>
                   Request revision
                 </Button>
               )}
-              <form action={approveDeliverable} className="order-2">
+
+              <form action={approveDeliverable} className="flex flex-wrap items-center gap-2">
                 <input type="hidden" name="projectId" value={projectId} />
                 <input type="hidden" name="deliverableId" value={deliverable.id} />
+
                 <ConfirmSubmitButton
                   triggerLabel="Approve deliverable"
                   title="Approve deliverable?"
@@ -157,7 +295,7 @@ export function DeliverableCard({
           <div className="grid gap-3 border-t pt-4">
             <h4 className="text-sm font-medium">Admin actions</h4>
             {isApproved ? (
-              <form action={undoDeliverableApproval} className="flex flex-wrap items-center gap-2">
+              <form action={undoDeliverableApproval} className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/20 p-3">
                 <input type="hidden" name="projectId" value={projectId} />
                 <input type="hidden" name="deliverableId" value={deliverable.id} />
                 <Button type="button" variant="success" disabled>
@@ -167,11 +305,11 @@ export function DeliverableCard({
                 <Button type="submit" variant="outline">Undo approval</Button>
               </form>
             ) : (
-              <details>
+              <details className="group rounded-md open:border open:p-3">
                 <summary className="inline-flex h-10 cursor-pointer list-none items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 px-4 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-100 marker:hidden">
                   Mark approved
                 </summary>
-                <form action={approveDeliverableOnBehalf} className="mt-3 grid gap-3 rounded-md border bg-muted/30 p-3 md:grid-cols-[160px_1fr_auto]">
+                <form action={approveDeliverableOnBehalf} className="mt-3 grid gap-3 rounded-md bg-background md:grid-cols-[160px_1fr_auto]">
                   <input type="hidden" name="projectId" value={projectId} />
                   <input type="hidden" name="deliverableId" value={deliverable.id} />
                   <select name="approvalSource" defaultValue="whatsapp" className="h-10 rounded-md border bg-background px-3 text-sm">
@@ -188,11 +326,11 @@ export function DeliverableCard({
               </details>
             )}
             {isReadyForClientReview && deliverable.revisionsRemaining > 0 ? (
-              <details>
+              <details className="group rounded-md open:border open:p-3">
                 <summary className="inline-flex h-10 cursor-pointer list-none items-center justify-center rounded-md border border-amber-200 bg-amber-50 px-4 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-100 marker:hidden">
                   Log manual revision
                 </summary>
-                <form action={logManualRevision} className="mt-3 grid gap-3 rounded-md border bg-muted/30 p-3 md:grid-cols-[160px_1fr_auto]">
+                <form action={logManualRevision} className="mt-3 grid gap-3 rounded-md bg-background md:grid-cols-[160px_1fr_auto]">
                   <input type="hidden" name="projectId" value={projectId} />
                   <input type="hidden" name="deliverableId" value={deliverable.id} />
                   <select name="source" defaultValue="whatsapp" className="h-10 rounded-md border bg-background px-3 text-sm">

@@ -36,9 +36,12 @@ Do not add chat, billing, invoicing, heavy file hosting, annotation tooling, a m
 - Do not hardcode secrets, hosted Supabase credentials, or agency-specific assumptions.
 - Keep documents and deliverable assets as external URLs for v1.
 - Add RLS for every new table in Supabase migrations.
+- Preserve the SaaS multi-tenant model: one app, one Supabase project, many organizations, and database access scoped by `organization_id` plus membership rows.
 
 ## Current Architecture Notes
 
+- `/` is the public SaaS landing page and `/register` starts agency owner registration.
+- `/dev-entry` preserves internal testing shortcuts for the team and client shells.
 - `app/(team)/admin` is the internal team shell.
 - `app/(client)/portal` is the client portal shell.
 - `app/(auth)/login` handles magic-link login foundations.

@@ -33,6 +33,15 @@ export function DeliverableForm({ projectId }: { projectId: string }) {
               <input name="expectedDeliveryDate" type="date" className="h-10 w-full rounded-md border bg-background px-3 text-sm" />
             </label>
             <label className="space-y-2">
+              <span className="text-sm font-medium">Delivery state</span>
+              <select name="deliveryState" defaultValue="planned" className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+                <option value="planned">Not started</option>
+                <option value="in_progress">In production</option>
+                <option value="editing">Editing</option>
+              </select>
+              <span className="block text-xs text-muted-foreground">Used only when no file link is attached.</span>
+            </label>
+            <label className="space-y-2">
               <span className="text-sm font-medium">Revision limit</span>
               <input name="revisionLimit" type="number" min="0" max="20" defaultValue="2" className="h-10 w-full rounded-md border bg-background px-3 text-sm" />
             </label>
