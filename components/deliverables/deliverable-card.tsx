@@ -120,12 +120,12 @@ export function DeliverableCard({
       : statusLabel[deliverable.status];
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-neutral-200 shadow-none">
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{deliverable.type}</p>
-            <h3 className="mt-1 font-semibold">{deliverable.title}</h3>
+            <p className="text-[12px] font-medium leading-none text-neutral-900/45">{deliverable.type}</p>
+            <h3 className="mt-1.5 text-[15px] font-semibold leading-5 text-neutral-900">{deliverable.title}</h3>
           </div>
           <DeliverableStatusBadge deliverable={deliverable} projectId={projectId} mode={mode} label={badgeLabel} />
         </div>
@@ -231,13 +231,13 @@ export function DeliverableCard({
           ) : null}
         </div>
         {isRevisionPending ? (
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
             Revision pending. The team needs to resubmit this deliverable before the client can approve or request another revision.
           </div>
         ) : null}
         {mode === "client" && projectId ? (
           <div className="space-y-3 border-t pt-4">
-            <h4 className="text-sm font-medium">Client actions</h4>
+            <h4 className="text-[13px] font-semibold text-neutral-900">Client actions</h4>
 
             <div className="space-y-3">
               {canRequestRevision ? (
@@ -293,7 +293,7 @@ export function DeliverableCard({
         ) : null}
         {mode === "admin" && projectId ? (
           <div className="grid gap-3 border-t pt-4">
-            <h4 className="text-sm font-medium">Admin actions</h4>
+            <h4 className="text-[13px] font-semibold text-neutral-900">Admin actions</h4>
             {isApproved ? (
               <form action={undoDeliverableApproval} className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/20 p-3">
                 <input type="hidden" name="projectId" value={projectId} />
@@ -368,7 +368,7 @@ export function DeliverableCard({
             </summary>
             <div className="mt-3 space-y-2">
               {deliverable.comments.map((comment) => (
-                <div key={comment.id} className="rounded-md bg-muted p-3 text-sm">
+                <div key={comment.id} className="rounded-xl bg-muted p-3 text-sm">
                   <p className="text-muted-foreground">{comment.body}</p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {comment.authorName ?? "User"} - {formatDate(comment.createdAt)}

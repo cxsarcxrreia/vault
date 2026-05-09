@@ -11,12 +11,12 @@ export function ProjectSummary({ project, actions }: { project: Project; actions
   const archiveReason = formatArchiveReason(project.archiveReason);
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-neutral-200 shadow-none">
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-sm text-muted-foreground">{project.clientName}</p>
-            <h2 className="mt-1 text-xl font-semibold">{project.name}</h2>
+            <p className="text-[12px] font-medium leading-none text-neutral-900/45">{project.clientName}</p>
+            <h2 className="mt-1.5 text-xl font-semibold text-neutral-900">{project.name}</h2>
           </div>
           <div className="flex flex-col items-end gap-2">
             <div className="flex flex-wrap justify-end gap-2">
@@ -26,8 +26,8 @@ export function ProjectSummary({ project, actions }: { project: Project; actions
             {actions}
           </div>
         </div>
-        <p className="text-sm leading-6 text-muted-foreground">{project.summary}</p>
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+        <p className="text-[13px] leading-5 text-neutral-500">{project.summary}</p>
+        <div className="flex flex-wrap gap-4 text-[13px] text-neutral-500">
           <span className="inline-flex items-center gap-2">
             <CalendarDays className="size-4" />
             {formatDate(project.startsOn)} to {formatDate(project.endsOn)}

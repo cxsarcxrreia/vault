@@ -1,5 +1,5 @@
 import { ContentSection } from "@/components/layout/content-section";
-import { PageHeader } from "@/components/layout/page-header";
+import { AppWorkspace, WorkspaceHeader } from "@/components/layout/app-workspace";
 import { DeliverableApprovalCount } from "@/components/deliverables/deliverable-approval-count";
 import { DeliverableForm } from "@/components/deliverables/deliverable-form";
 import { DeliverablesList } from "@/components/deliverables/deliverables-list";
@@ -72,13 +72,13 @@ export default async function AdminProjectPage({ params, searchParams }: Project
   const documentPhaseOrder = project ? getDocumentPhaseOrderForProjectPhases(project.phases) : [];
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Team project"
+    <AppWorkspace width="wide">
+      <WorkspaceHeader
+        label="Team project"
         title={project?.name ?? "Project"}
-        description="Operational shell for draft setup, payment confirmation, activation, deliverables, documents, and responsibilities."
+        meta={project ? `${project.clientName} / ${project.currentPhase}` : "Project operations"}
       />
-      <div className="space-y-8 p-6">
+      <div className="space-y-8">
         {error ? <FormMessage type="error">{error}</FormMessage> : null}
         {updated && !hasMappedSectionUpdate ? <FormMessage type="success" autoDismissMs={5000}>{updateMessage}</FormMessage> : null}
         {created ? <FormMessage type="success" autoDismissMs={5000}>Draft project created.</FormMessage> : null}
@@ -180,6 +180,6 @@ export default async function AdminProjectPage({ params, searchParams }: Project
           </>
         )}
       </div>
-    </>
+    </AppWorkspace>
   );
 }

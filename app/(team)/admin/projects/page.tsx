@@ -1,6 +1,6 @@
 import { DraftProjectForm } from "@/components/project/draft-project-form";
 import { ProjectsList } from "@/components/project/projects-list";
-import { PageHeader } from "@/components/layout/page-header";
+import { AppWorkspace, WorkspaceHeader } from "@/components/layout/app-workspace";
 import { FormMessage } from "@/components/shared/form-message";
 import { SetupRequired } from "@/components/shared/setup-required";
 import { ButtonLink } from "@/components/ui/button";
@@ -24,16 +24,16 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   ]);
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Team"
+    <AppWorkspace width="wide">
+      <WorkspaceHeader
+        label="Team"
         title="Projects"
-        description="Internal draft and active client projects live here. Activation remains team-controlled after payment confirmation."
+        meta="Draft setup, activation state, and active client work."
       />
-      <div className="space-y-6 p-6">
+      <div className="space-y-6">
         {error ? <FormMessage type="error">{error}</FormMessage> : null}
         {limit === "projects" ? (
-          <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 md:flex-row md:items-center md:justify-between">
             <p className="text-sm text-muted-foreground">Review project capacity and upgrade options for this organization.</p>
             <ButtonLink href="/admin/billing" variant="outline">View plan</ButtonLink>
           </div>
@@ -47,6 +47,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
         )}
         <ProjectsList projects={projectsResult.data} mode="admin" />
       </div>
-    </>
+    </AppWorkspace>
   );
 }

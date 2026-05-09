@@ -10,7 +10,7 @@ export function ProjectCompletionSummary({ project }: { project: Project }) {
   const clientVisibleDocuments = project.documents.filter((document) => document.visibleToClient).length;
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-neutral-200 shadow-none">
       <CardContent className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase text-muted-foreground">Project state</p>

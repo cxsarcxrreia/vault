@@ -1,5 +1,5 @@
 import { CalendarDays } from "lucide-react";
-import { PageHeader } from "@/components/layout/page-header";
+import { AppWorkspace, WorkspaceHeader } from "@/components/layout/app-workspace";
 import { ConfirmSubmitButton } from "@/components/shared/confirm-submit-button";
 import { FormMessage } from "@/components/shared/form-message";
 import { SetupRequired } from "@/components/shared/setup-required";
@@ -22,18 +22,18 @@ export default async function TemplatesPage({ searchParams }: TemplatesPageProps
   const result = await getProjectTemplates();
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Team"
+    <AppWorkspace width="wide">
+      <WorkspaceHeader
+        label="Team"
         title="Service templates"
-        description="Templates define default macro phases, deliverable suggestions, responsibility presets, and calendar support."
+        meta="Reusable macro flows, deliverable suggestions, and responsibility presets."
         actions={
           <ButtonLink href="/admin/templates/new" className="bg-black text-white hover:bg-neutral-800">
             Create New Service Template
           </ButtonLink>
         }
       />
-      <div className="space-y-4 p-6">
+      <div className="space-y-4">
         {error ? <FormMessage type="error">{error}</FormMessage> : null}
         {created === "service-template" ? <FormMessage type="success" autoDismissMs={5000}>Service template created.</FormMessage> : null}
         {deleted === "service-template" ? <FormMessage type="success" autoDismissMs={5000}>Service template deleted.</FormMessage> : null}
@@ -50,7 +50,7 @@ export default async function TemplatesPage({ searchParams }: TemplatesPageProps
             const responsibilityPresets = hasBuiltInResponsibilityPresets ? getResponsibilityPresetsForTemplate(template.name) : [];
 
             return (
-              <Card key={template.id}>
+              <Card key={template.id} className="rounded-2xl border-neutral-200 shadow-none">
                 <CardContent className="space-y-5">
                   <div className="flex items-start justify-between gap-3">
                     <h2 className="font-semibold">{template.name}</h2>
@@ -117,6 +117,6 @@ export default async function TemplatesPage({ searchParams }: TemplatesPageProps
           })}
         </div>
       </div>
-    </>
+    </AppWorkspace>
   );
 }

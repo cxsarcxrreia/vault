@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/layout/page-header";
+import { AppWorkspace, WorkspaceHeader } from "@/components/layout/app-workspace";
 import { ServiceTemplateBuilderForm } from "@/components/templates/service-template-builder-form";
 import { FormMessage } from "@/components/shared/form-message";
 import { ButtonLink } from "@/components/ui/button";
@@ -14,14 +14,14 @@ export default async function NewTemplatePage({ searchParams }: NewTemplatePageP
   const backHref = source === "project-draft" ? "/admin/projects?resumeDraft=1" : "/admin/templates";
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Team"
+    <AppWorkspace width="wide">
+      <WorkspaceHeader
+        label="Team"
         title="Create service template"
-        description={
+        meta={
           source === "project-draft"
-            ? "Build a custom macro timeline first, then return to the draft project form with the new template ready to use."
-            : "Create a custom service template by arranging the standard macro phases into the order this service needs."
+            ? "Build a custom macro timeline, then return to the draft project form."
+            : "Arrange macro phases into the order this service needs."
         }
         actions={
           <ButtonLink href={backHref} variant="outline">
@@ -29,10 +29,10 @@ export default async function NewTemplatePage({ searchParams }: NewTemplatePageP
           </ButtonLink>
         }
       />
-      <div className="space-y-4 p-6">
+      <div className="space-y-4">
         {error ? <FormMessage type="error">{error}</FormMessage> : null}
         <ServiceTemplateBuilderForm source={source} />
       </div>
-    </>
+    </AppWorkspace>
   );
 }

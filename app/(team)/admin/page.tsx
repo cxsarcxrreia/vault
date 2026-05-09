@@ -1,62 +1,144 @@
-import { PageHeader } from "@/components/layout/page-header";
+import type { LucideIcon } from "lucide-react";
+import { LayoutDashboard, SquarePen, UsersRound, Workflow } from "lucide-react";
+import Link from "next/link";
+import { Reveal, TypingText } from "@/components/motion/reveal";
+import { AdminHomeRecentProjects } from "@/components/project/admin-home-recent-projects";
 import { FormMessage } from "@/components/shared/form-message";
 import { SetupRequired } from "@/components/shared/setup-required";
-import { Card, CardContent } from "@/components/ui/card";
-import { ButtonLink } from "@/components/ui/button";
-import { getAdminDashboardMetrics } from "@/features/projects/queries";
+import {
+  getAdminDashboardMetrics,
+  getAdminProjects,
+  getCurrentOrganizationIdentity,
+  getCurrentProfile
+} from "@/features/projects/queries";
 
 type AdminPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
+const workspaceFont = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  letterSpacing: "0"
+};
+
+const welcomeFont = {
+  fontFamily: '"NdOT 57", Inter, ui-sans-serif, system-ui, sans-serif',
+  letterSpacing: "0"
+};
+
+const quickActions: Array<{
+  label: string;
+  href: string;
+  icon: LucideIcon;
+}> = [
+  { label: "New Project", href: "/admin/projects", icon: SquarePen },
+  { label: "New Pipeline", href: "/admin/templates", icon: Workflow },
+  { label: "View Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "View Clients", href: "/admin/clients", icon: UsersRound }
+];
+
+function getFirstName(fullName?: string | null) {
+  const trimmed = fullName?.trim();
+
+  if (!trimmed) {
+    return "César";
+  }
+
+  return trimmed.split(/\s+/)[0] ?? "César";
+}
+
+function QuickActionCard({ action }: { action: (typeof quickActions)[number] }) {
+  const Icon = action.icon;
+
+  return (
+    <Link href={action.href} className="group flex min-w-0 flex-col items-center gap-3">
+      <span className="flex size-[118px] items-center justify-center rounded-[20px] border border-neutral-200/70 bg-neutral-100 text-neutral-900/85 transition duration-200 group-hover:-translate-y-0.5 group-hover:bg-neutral-200 group-hover:text-neutral-900">
+        <Icon className="size-5" strokeWidth={1.8} aria-hidden="true" />
+      </span>
+      <span className="text-center text-[12px] font-medium leading-none text-neutral-800">{action.label}</span>
+    </Link>
+  );
+}
+
+const quickActionDelayStart = 220;
+const quickActionDelayStep = 110;
+
+function StatRow({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-neutral-100 text-[13px] font-semibold text-neutral-900">
+        {value}
+      </span>
+      <span className="text-[13px] font-medium leading-4 text-neutral-700">{label}</span>
+    </div>
+  );
+}
+
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const params = searchParams ? await searchParams : {};
   const error = typeof params.error === "string" ? params.error : null;
-  const result = await getAdminDashboardMetrics();
-  const metrics = result.data;
+  const [metricsResult, projectsResult, profile, organization] = await Promise.all([
+    getAdminDashboardMetrics(),
+    getAdminProjects(),
+    getCurrentProfile(),
+    getCurrentOrganizationIdentity()
+  ]);
+  const metrics = metricsResult.data;
+  const welcomeText = `Welcome back, ${getFirstName(profile?.full_name)}`;
+  const setupMessage = metricsResult.setupRequired
+    ? metricsResult.error
+    : projectsResult.setupRequired
+      ? projectsResult.error
+      : null;
+  const recentProjectsScopeKey = organization?.id ? `org:${organization.id}` : undefined;
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Team"
-        title="Admin overview"
-        description="Manage draft setup, activation, deliverables, documents, and responsibility visibility from one simple shell."
-        actions={<ButtonLink href="/admin/projects">View projects</ButtonLink>}
-      />
-      <div className="space-y-4 p-6">
-        {error ? <FormMessage type="error">{error}</FormMessage> : null}
-        {result.setupRequired ? <SetupRequired message={result.error} /> : null}
+    <div className="min-h-screen bg-white px-5 pb-16 pt-16 md:px-10 md:pb-24 md:pt-32 xl:pt-40" style={workspaceFont}>
+      <div className="mx-auto w-full max-w-[920px] space-y-10">
+        <div className="space-y-3">
+          {error ? <FormMessage type="error">{error}</FormMessage> : null}
+          {setupMessage ? <SetupRequired message={setupMessage} /> : null}
+        </div>
+
+        <header className="space-y-1.5">
+          <Reveal delay={80} distance={8}>
+            <p className="text-[12px] font-medium leading-none text-neutral-900/45">My Workspace</p>
+          </Reveal>
+          <h1 className="text-[24px] font-semibold leading-tight tracking-normal text-neutral-900 sm:text-[26px]" style={welcomeFont}>
+            <TypingText text={welcomeText} delay={1120} duration={880} />
+          </h1>
+        </header>
+
+        <section aria-label="Quick actions" className="grid grid-cols-2 gap-x-5 gap-y-6 sm:inline-grid sm:grid-cols-4">
+          {quickActions.map((action, index) => (
+            <Reveal
+              key={action.label}
+              delay={quickActionDelayStart + index * quickActionDelayStep}
+              direction="right"
+              distance={16}
+            >
+              <QuickActionCard action={action} />
+            </Reveal>
+          ))}
+        </section>
+
+        <div className="grid gap-10 pt-2 lg:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.85fr)] lg:gap-12">
+          <Reveal delay={760}>
+            <AdminHomeRecentProjects projects={projectsResult.data} recentProjectsScopeKey={recentProjectsScopeKey} />
+          </Reveal>
+
+          <Reveal delay={880}>
+            <section className="space-y-4">
+              <h2 className="text-[15px] font-semibold leading-none text-neutral-900">Projects Overview</h2>
+              <div className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-4">
+                <StatRow value={metrics.activeProjects} label="Active Projects" />
+                <StatRow value={metrics.revisionRequests} label="Deliverables need revision from you" />
+                <StatRow value={metrics.readyForClientReview} label="Deliverable waiting for client review" />
+              </div>
+            </section>
+          </Reveal>
+        </div>
       </div>
-      <div className="grid gap-4 px-6 pb-6 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Active projects</p>
-            <p className="mt-2 text-3xl font-semibold">{metrics.activeProjects}</p>
-            <p className="mt-2 text-xs text-muted-foreground">Projects currently in operation.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Ready for client review</p>
-            <p className="mt-2 text-3xl font-semibold">{metrics.readyForClientReview}</p>
-            <p className="mt-2 text-xs text-muted-foreground">Deliverables sent to clients and waiting for approval or a revision request.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Revision requests</p>
-            <p className="mt-2 text-3xl font-semibold">{metrics.revisionRequests}</p>
-            <p className="mt-2 text-xs text-muted-foreground">Deliverables waiting on team resubmission.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Ready to activate</p>
-            <p className="mt-2 text-3xl font-semibold">{metrics.readyToActivate}</p>
-            <p className="mt-2 text-xs text-muted-foreground">Projects with payment confirmed but portal not yet active.</p>
-          </CardContent>
-        </Card>
-      </div>
-    </>
+    </div>
   );
 }

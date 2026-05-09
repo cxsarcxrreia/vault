@@ -90,14 +90,14 @@ export function DocumentList({
   const canManage = mode === "admin" && Boolean(projectId);
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-neutral-200 shadow-none">
       <CardContent className="space-y-5">
         <div className="flex flex-wrap gap-2">
           <Link
             href={getFilterHref(basePath, timelineView)}
             aria-current={!normalizedActivePhaseKey ? "page" : undefined}
             className={cn(
-              "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+              "rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors",
               !normalizedActivePhaseKey
                 ? "bg-primary text-primary-foreground"
                 : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -111,7 +111,7 @@ export function DocumentList({
               href={getFilterHref(basePath, timelineView, phase.key)}
               aria-current={normalizedActivePhaseKey === phase.key ? "page" : undefined}
               className={cn(
-                "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+                "rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors",
                 normalizedActivePhaseKey === phase.key
                   ? "bg-primary text-primary-foreground"
                   : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -132,7 +132,7 @@ export function DocumentList({
                       <FolderOpen className="size-4 text-muted-foreground" aria-hidden="true" />
                     </span>
                     <div>
-                      <h3 className="text-sm font-semibold">{phase.label}</h3>
+                      <h3 className="text-[13px] font-semibold">{phase.label}</h3>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">{getDocumentPhaseDescription(phase.key)}</p>
                     </div>
                   </div>
@@ -147,7 +147,7 @@ export function DocumentList({
                             <FileText className="size-4 text-muted-foreground" aria-hidden="true" />
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{document.title}</p>
+                            <p className="truncate text-[13px] font-semibold text-neutral-900">{document.title}</p>
                             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                               <span>{document.type}</span>
                               <span aria-hidden="true">/</span>

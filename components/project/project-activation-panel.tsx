@@ -23,7 +23,7 @@ export function ProjectActivationPanel({ project }: { project: Project }) {
   }
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-neutral-200 shadow-none">
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

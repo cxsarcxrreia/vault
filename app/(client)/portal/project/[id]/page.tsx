@@ -1,5 +1,5 @@
 import { ContentSection } from "@/components/layout/content-section";
-import { PageHeader } from "@/components/layout/page-header";
+import { AppWorkspace, WorkspaceHeader } from "@/components/layout/app-workspace";
 import { DeliverableApprovalCount } from "@/components/deliverables/deliverable-approval-count";
 import { DeliverablesList } from "@/components/deliverables/deliverables-list";
 import { DocumentList } from "@/components/documents/document-list";
@@ -51,17 +51,17 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
   const documentPhaseOrder = project ? getDocumentPhaseOrderForProjectPhases(project.phases) : [];
 
   return (
-    <>
-      <PageHeader
-        eyebrow={isTeamPreview ? "Team preview" : "Client project"}
+    <AppWorkspace width="wide">
+      <WorkspaceHeader
+        label={isTeamPreview ? "Team preview" : "Client project"}
         title={project?.name ?? "Project"}
-        description={
+        meta={
           isTeamPreview
-            ? "You are previewing the client portal while signed in as a team user."
-            : "A simple view of what is happening now, what needs attention, and where key assets live."
+            ? "Client portal preview from a team account."
+            : "Current phase, review needs, and key assets."
         }
       />
-      <div className="space-y-8 p-6">
+      <div className="space-y-8">
         {isTeamPreview ? (
           <FormMessage type="info">
             Team preview mode. Client-only approve and revision actions should be tested by signing in with the client email.
@@ -146,7 +146,7 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
         </ContentSection>
         {project.supportsCalendar ? (
           <ContentSection title="Calendar" description="Placeholder for recurring retainer cycles.">
-            <Card>
+            <Card className="rounded-2xl border-neutral-200 shadow-none">
               <CardContent>
                 <p className="text-sm text-muted-foreground">Calendar visibility will be added for recurring retainers.</p>
               </CardContent>
@@ -156,6 +156,6 @@ export default async function PortalProjectPage({ params, searchParams }: Portal
           </>
         )}
       </div>
-    </>
+    </AppWorkspace>
   );
 }

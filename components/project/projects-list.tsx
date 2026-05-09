@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { deleteDraftProject } from "@/features/projects/actions";
+import { getProjectHealth } from "@/features/projects/health";
 import { formatArchiveReason, getMainProjectState, getProjectStateTone } from "@/features/projects/state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,6 @@ type ProjectsListProps = {
 
 type StatusFilter = "all" | "active" | "paused" | "archived";
 type ProjectInsightTone = "neutral" | "active" | "warning" | "danger";
-type ProjectHealthTone = "active" | "warning" | "danger";
 
 const completedDeliverableStatuses = new Set<Deliverable["status"]>(["approved", "delivered"]);
 const dayInMs = 24 * 60 * 60 * 1000;
@@ -63,78 +63,6 @@ function formatDayCount(days: number) {
   const absoluteDays = Math.abs(days);
 
   return `${absoluteDays} ${absoluteDays === 1 ? "day" : "days"}`;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function getTimelineProgress(project: Project) {
-  const startsOn = parseDate(project.startsOn);
-  const endsOn = parseDate(project.endsOn);
-
-  if (!startsOn || !endsOn || endsOn <= startsOn) {
-    return project.endsOn ? 0.5 : 0;
-  }
-
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  return clamp((today.getTime() - startsOn.getTime()) / (endsOn.getTime() - startsOn.getTime()), 0, 1);
-}
-
-function getProjectHealth(project: Project): { label: "Healthy" | "Needs attention" | "Not Healthy"; tone: ProjectHealthTone } {
-  const totalDeliverables = project.deliverables.length;
-  const pendingDeliverables = project.deliverables.filter((deliverable) => !completedDeliverableStatuses.has(deliverable.status));
-  const completedRatio = totalDeliverables ? (totalDeliverables - pendingDeliverables.length) / totalDeliverables : 0;
-  const timelineProgress = getTimelineProgress(project);
-  const progressGap = timelineProgress - completedRatio;
-  const projectDaysLeft = daysUntil(project.endsOn);
-  const overdueDeliverables = pendingDeliverables.filter((deliverable) => {
-    const deliverableDaysLeft = daysUntil(deliverable.expectedDeliveryDate);
-
-    return deliverableDaysLeft !== null && deliverableDaysLeft < 0;
-  }).length;
-  const dueSoonDeliverables = pendingDeliverables.filter((deliverable) => {
-    const deliverableDaysLeft = daysUntil(deliverable.expectedDeliveryDate);
-
-    return deliverableDaysLeft !== null && deliverableDaysLeft >= 0 && deliverableDaysLeft <= 3;
-  }).length;
-
-  let score = 100;
-
-  if (!totalDeliverables) {
-    score -= 20;
-  }
-
-  if (!project.endsOn) {
-    score -= 10;
-  }
-
-  if (progressGap > 0.5) {
-    score -= 35;
-  } else if (progressGap > 0.25) {
-    score -= 20;
-  } else if (progressGap > 0.1) {
-    score -= 10;
-  }
-
-  score -= Math.min(overdueDeliverables * 25, 45);
-  score -= Math.min(dueSoonDeliverables * 8, 20);
-
-  if (projectDaysLeft !== null && projectDaysLeft < 0 && pendingDeliverables.length) {
-    score -= 30;
-  }
-
-  if (score >= 75) {
-    return { label: "Healthy", tone: "active" };
-  }
-
-  if (score >= 45) {
-    return { label: "Needs attention", tone: "warning" };
-  }
-
-  return { label: "Not Healthy", tone: "danger" };
 }
 
 function getProjectTimeInsight(project: Project) {
@@ -213,14 +141,14 @@ function ProjectInsight({ label, value, tone }: { label: string; value: string; 
   return (
     <div
       className={cn(
-        "min-w-0 rounded-md border px-2.5 py-2",
+        "min-w-0 rounded-xl border px-3 py-2",
         tone === "neutral" && "border-border bg-muted/20 text-muted-foreground",
         tone === "active" && "border-emerald-200 bg-emerald-50 text-emerald-700",
         tone === "warning" && "border-amber-200 bg-amber-50 text-amber-800",
         tone === "danger" && "border-red-200 bg-red-50 text-red-700"
       )}
     >
-      <p className="text-[10px] font-medium uppercase text-current/70">{label}</p>
+      <p className="text-[11px] font-medium text-current/60">{label}</p>
       <p className="mt-0.5 truncate text-xs font-semibold text-current">{value}</p>
     </div>
   );
@@ -234,13 +162,13 @@ function ProjectRow({ project, mode }: { project: Project; mode: "admin" | "clie
   const health = getProjectHealth(project);
 
   return (
-    <Card className="transition-colors hover:bg-muted/40">
-      <CardContent className="flex flex-wrap items-start justify-between gap-4">
+    <Card className="rounded-2xl border-neutral-200 shadow-none transition-colors hover:bg-neutral-50">
+      <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1 space-y-3">
           <Link href={href} className="block rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
             <div>
-              <p className="text-sm font-medium">{project.name}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="text-[13px] font-semibold leading-4 text-neutral-900">{project.name}</p>
+              <p className="mt-1 text-[12px] leading-4 text-neutral-900/45">
                 {mode === "admin" ? project.clientName : `Current phase: ${project.currentPhase}`}
               </p>
             </div>
@@ -249,7 +177,7 @@ function ProjectRow({ project, mode }: { project: Project; mode: "admin" | "clie
             <summary className="inline-flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden">
               <span
                 className={cn(
-                  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none transition-colors",
                   health.tone === "active" && "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
                   health.tone === "warning" && "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
                   health.tone === "danger" && "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
@@ -265,7 +193,7 @@ function ProjectRow({ project, mode }: { project: Project; mode: "admin" | "clie
             </div>
           </details>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {canDelete ? (
             <form action={deleteDraftProject}>
               <input type="hidden" name="projectId" value={project.id} />
@@ -314,7 +242,7 @@ export function ProjectsList({ projects, mode }: ProjectsListProps) {
     <div className="space-y-4">
       {mode === "admin" && otherProjects.length ? (
         <div className="space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">Draft and setup projects</p>
+          <p className="text-[12px] font-medium text-neutral-900/45">Draft and setup projects</p>
           <div className="grid gap-4">
             {otherProjects.map((project) => (
               <ProjectRow key={project.id} project={project} mode={mode} />
@@ -341,7 +269,7 @@ export function ProjectsList({ projects, mode }: ProjectsListProps) {
                 }
               }}
               className={cn(
-                "rounded-md border px-3 py-2 text-sm transition-colors",
+                "rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors",
                 filter === item.value ? "border-foreground text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
@@ -358,7 +286,7 @@ export function ProjectsList({ projects, mode }: ProjectsListProps) {
           ))}
         </div>
       ) : filter !== "all" ? (
-        <Card>
+        <Card className="rounded-2xl border-neutral-200 shadow-none">
           <CardContent>
             <p className="text-sm text-muted-foreground">No {filter} projects right now.</p>
           </CardContent>
@@ -372,7 +300,7 @@ export function ProjectsList({ projects, mode }: ProjectsListProps) {
             <button
               type="button"
               onClick={() => setArchivedExpanded((current) => !current)}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Archived Projects
             </button>
@@ -389,7 +317,7 @@ export function ProjectsList({ projects, mode }: ProjectsListProps) {
       ) : null}
 
       {!projects.length ? (
-        <Card>
+        <Card className="rounded-2xl border-neutral-200 shadow-none">
           <CardContent>
             <p className="text-sm text-muted-foreground">
               {mode === "admin" ? "No projects yet." : "No activated projects are visible for this account yet."}
