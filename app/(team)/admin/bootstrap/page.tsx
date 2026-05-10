@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/layout/page-header";
+import { AppWorkspace, WorkspaceHeader } from "@/components/layout/app-workspace";
 import { FormMessage } from "@/components/shared/form-message";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -30,14 +30,14 @@ export default async function BootstrapPage({ searchParams }: BootstrapPageProps
   const bootstrapEmailAllowed = Boolean(user?.email && isBootstrapEmailAllowed(user.email));
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Setup"
+    <AppWorkspace width="narrow">
+      <WorkspaceHeader
+        label="Setup"
         title="Claim Paladar owner"
-        description="Use this once after the first magic-link sign-in to create the initial Paladar workspace owner."
+        meta="One-time owner claim after the first magic-link sign-in."
       />
-      <div className="p-6">
-        <Card className="max-w-xl">
+      <div>
+        <Card className="max-w-xl rounded-2xl border-neutral-200 shadow-none">
           <CardHeader>
             <h2 className="font-semibold">Initial team setup</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -61,6 +61,6 @@ export default async function BootstrapPage({ searchParams }: BootstrapPageProps
           </CardContent>
         </Card>
       </div>
-    </>
+    </AppWorkspace>
   );
 }

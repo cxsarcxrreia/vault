@@ -154,7 +154,7 @@ export function DraftProjectForm({
 
   if (planUsage?.isLimitReached) {
     return (
-      <Card>
+      <Card className="rounded-2xl border-neutral-200 shadow-none">
         <CardHeader>
           <h2 className="font-semibold">Project limit reached</h2>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -228,7 +228,7 @@ export function ServiceTemplateBuilderForm({ source = "templates" }: ServiceTemp
         <input key={phase.phaseKey} type="hidden" name="phaseDefinition" value={JSON.stringify(phase)} />
       ))}
 
-      <Card>
+      <Card className="rounded-2xl border-neutral-200 shadow-none">
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <label className="flex flex-col gap-2">

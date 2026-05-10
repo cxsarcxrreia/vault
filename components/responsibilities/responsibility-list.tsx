@@ -45,13 +45,13 @@ export function ResponsibilityList({ items, mode = "readonly", projectId, preset
   const responsibilityPresets = presets.length ? presets : ["Content Planning", "Creative Direction", "Feedback and Approvals"];
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-neutral-200 shadow-none">
       <CardContent className="space-y-4">
         <div
           className={
             canEdit
-              ? `grid gap-2 text-xs font-medium uppercase text-muted-foreground ${editableGridClass}`
-              : `grid gap-2 px-4 text-xs font-medium uppercase text-muted-foreground ${readonlyGridClass}`
+              ? `grid gap-2 text-[11px] font-medium text-neutral-900/45 ${editableGridClass}`
+              : `grid gap-2 px-4 text-[11px] font-medium text-neutral-900/45 ${readonlyGridClass}`
           }
         >
           <span>Responsibility</span>
@@ -66,8 +66,8 @@ export function ResponsibilityList({ items, mode = "readonly", projectId, preset
               canEdit ? (
                 <EditableResponsibilityRow key={item.id} item={item} projectId={projectId!} gridClassName={editableGridClass} />
               ) : (
-                <div key={item.id} className={`grid gap-3 rounded-lg border bg-background p-4 md:items-start ${readonlyGridClass}`}>
-                  <p className="text-sm font-medium">{item.title}</p>
+                <div key={item.id} className={`grid gap-3 rounded-2xl border bg-background p-4 md:items-start ${readonlyGridClass}`}>
+                  <p className="text-[13px] font-semibold text-neutral-900">{item.title}</p>
                   <Badge tone={ownerTone[item.owner]} className="w-fit self-start">
                     {getResponsibilityOwnerLabel(item.owner)}
                   </Badge>

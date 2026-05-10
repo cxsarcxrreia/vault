@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/layout/page-header";
+import { AppWorkspace, WorkspaceHeader } from "@/components/layout/app-workspace";
 import { SetupRequired } from "@/components/shared/setup-required";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,15 +9,15 @@ export default async function ClientsPage() {
   const result = await getClients();
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Team"
+    <AppWorkspace>
+      <WorkspaceHeader
+        label="Team"
         title="Clients"
-        description="Client records connect portal users to activated projects."
+        meta="Client records and activated portal access."
       />
-      <div className="space-y-4 p-6">
+      <div className="space-y-4">
         {result.setupRequired ? <SetupRequired message={result.error} /> : null}
-        <Card>
+        <Card className="rounded-2xl border-neutral-200 shadow-none">
           <CardContent>
             {result.data.length ? (
               <ul className="divide-y">
@@ -44,6 +44,6 @@ export default async function ClientsPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </AppWorkspace>
   );
 }

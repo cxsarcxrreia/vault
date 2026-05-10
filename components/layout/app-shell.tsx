@@ -1,11 +1,25 @@
 "use client";
 
-import { Menu, X } from "lucide-react";
+import {
+  CreditCard,
+  FolderKanban,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  UsersRound,
+  Workflow,
+  X
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { signOut } from "@/features/auth/actions";
 import { cn } from "@/lib/utils/cn";
+
+const shellFont = {
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  letterSpacing: "0"
+};
 
 export const RECENT_ADMIN_PROJECTS_STORAGE_KEY = "vault:recent-admin-projects";
 export const RECENT_CLIENT_PROJECTS_STORAGE_KEY = "vault:recent-client-projects";
@@ -29,6 +43,30 @@ function isNavItemActive(pathname: string, href: string) {
   }
 
   return pathname === href || (href !== "/admin" && href !== "/portal" && pathname.startsWith(`${href}/`));
+}
+
+function NavIcon({ item }: { item: NavItem }) {
+  if (item.href === "/admin") {
+    return <LayoutDashboard className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />;
+  }
+
+  if (item.href.includes("clients")) {
+    return <UsersRound className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />;
+  }
+
+  if (item.href.includes("projects") || item.href === "/portal") {
+    return <FolderKanban className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />;
+  }
+
+  if (item.href.includes("templates")) {
+    return <Workflow className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />;
+  }
+
+  if (item.href.includes("billing")) {
+    return <CreditCard className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />;
+  }
+
+  return <LayoutDashboard className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />;
 }
 
 function getProjectStateTone(state: string) {
@@ -197,11 +235,14 @@ function NavLink({
         href={item.href}
         onClick={handleClick}
         className={cn(
-          "block rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted hover:text-foreground",
-          isActive ? "font-semibold text-foreground" : "font-normal text-muted-foreground"
+          "flex items-center gap-2.5 rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors",
+          isActive
+            ? "border-neutral-200 bg-white text-neutral-900"
+            : "border-transparent text-neutral-500 hover:bg-white hover:text-neutral-900"
         )}
       >
-        {item.label}
+        <NavIcon item={item} />
+        <span>{item.label}</span>
       </Link>
       {projectNavConfig ? (
         <RecentProjectsNav
@@ -238,12 +279,12 @@ export function AppShell({
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-card px-4 py-5 md:block">
-        <Link href="/" className="block text-sm font-semibold">
+    <div className="min-h-screen bg-background" style={shellFont}>
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-neutral-200 bg-neutral-50 px-4 py-5 md:block">
+        <Link href="/" className="block text-sm font-semibold text-neutral-900">
           {brandLabel}
         </Link>
-        <p className="mt-1 text-xs text-muted-foreground">{area}</p>
+        <p className="mt-1 text-xs font-medium text-neutral-500">{area}</p>
         <nav className="mt-8 space-y-1">
           {navItems.map((item) => (
             <NavLink
@@ -256,17 +297,18 @@ export function AppShell({
           ))}
         </nav>
         <form action={signOut} className="absolute bottom-5 left-4 right-4">
-          <button className="w-full rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-            Sign out
+          <button className="flex w-full items-center gap-2.5 rounded-lg border border-transparent px-3 py-2 text-left text-[13px] font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900">
+            <LogOut className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+            <span>Sign out</span>
           </button>
         </form>
       </aside>
       <div className="md:pl-64">
-        <header className="flex min-h-14 items-center justify-between border-b bg-card px-6 md:hidden">
+        <header className="flex min-h-14 items-center justify-between border-b border-neutral-200 bg-neutral-50 px-5 md:hidden">
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="inline-flex size-9 items-center justify-center rounded-md border bg-background text-foreground transition-colors hover:bg-muted"
+              className="inline-flex size-9 items-center justify-center rounded-lg border bg-white text-neutral-800 transition-colors hover:bg-muted"
               onClick={() => setIsMobileNavOpen((current) => !current)}
               aria-expanded={isMobileNavOpen}
               aria-controls="mobile-app-nav"
@@ -274,7 +316,7 @@ export function AppShell({
             >
               {isMobileNavOpen ? <X className="size-4" aria-hidden="true" /> : <Menu className="size-4" aria-hidden="true" />}
             </button>
-            <Link href="/" className="text-sm font-semibold">
+            <Link href="/" className="text-sm font-semibold text-neutral-900">
               {brandLabel}
             </Link>
           </div>
@@ -292,7 +334,7 @@ export function AppShell({
             />
             <div
               id="mobile-app-nav"
-              className="fixed inset-x-4 top-16 z-50 rounded-xl border bg-card p-4 shadow-lg md:hidden"
+              className="fixed inset-x-4 top-16 z-50 rounded-xl border bg-neutral-50 p-4 shadow-lg md:hidden"
             >
               <div className="space-y-1">
                 {navItems.map((item) => (
@@ -309,8 +351,9 @@ export function AppShell({
                 ))}
               </div>
               <form action={signOut} className="mt-4 border-t pt-4">
-                <button className="w-full rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                  Sign out
+                <button className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900">
+                  <LogOut className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Sign out</span>
                 </button>
               </form>
             </div>

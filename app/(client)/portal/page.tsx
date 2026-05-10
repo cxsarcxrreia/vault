@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/layout/page-header";
+import { AppWorkspace, WorkspaceHeader } from "@/components/layout/app-workspace";
 import { ProjectsList } from "@/components/project/projects-list";
 import { SetupRequired } from "@/components/shared/setup-required";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,19 +10,19 @@ export default async function PortalPage() {
   const isTeamPreview = profile?.user_type === "team";
 
   return (
-    <>
-      <PageHeader
-        eyebrow={isTeamPreview ? "Team preview" : "Client"}
+    <AppWorkspace>
+      <WorkspaceHeader
+        label={isTeamPreview ? "Team preview" : "Client"}
         title={isTeamPreview ? "Client portal preview" : "Project portal"}
-        description={
+        meta={
           isTeamPreview
-            ? "You are viewing activated client projects with your team account. Real clients only see projects mapped to their client user."
-            : "Your activated projects, current phase, deliverables, documents, and responsibilities."
+            ? "Activated client projects shown with your team account."
+            : "Activated projects, deliverables, documents, and responsibilities."
         }
       />
-      <div className="grid gap-4 p-6">
+      <div className="grid gap-4">
         {isTeamPreview ? (
-          <Card>
+          <Card className="rounded-2xl border-neutral-200 shadow-none">
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Team preview mode uses your admin session. To test a true client account, sign in with the client email used on the project.
@@ -33,6 +33,6 @@ export default async function PortalPage() {
         {result.setupRequired ? <SetupRequired message={result.error} /> : null}
         <ProjectsList projects={activeProjects} mode="client" />
       </div>
-    </>
+    </AppWorkspace>
   );
 }
