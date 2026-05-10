@@ -1,8 +1,8 @@
 import { Building2, Mail } from "lucide-react";
 import Link from "next/link";
+import { PublicHeader, PublicNav, PublicPage, PublicPanel, PublicWorkspace } from "@/components/layout/public-shell";
 import { FormMessage } from "@/components/shared/form-message";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { getCanonicalAppUrl, isLocalAppUrl } from "@/lib/app-url";
 import { createDevAgencyRegistrationLink, createDevPendingRegistrationLink, startAgencyRegistration } from "./actions";
 
@@ -18,32 +18,33 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   const showDevLink = process.env.NODE_ENV !== "production" && isLocalAppUrl(appUrl);
 
   return (
-    <main className="min-h-screen bg-background px-6 py-12">
-      <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-5xl items-center">
-        <div className="grid w-full gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
-            <Link href="/" className="text-sm font-semibold">
-              VAULT
-            </Link>
-            <h1 className="mt-6 text-3xl font-semibold tracking-normal md:text-5xl">Create your agency workspace</h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">
-              Start with a clean operations layer for client projects, deliverables, approvals, documents, and responsibilities.
-            </p>
-          </div>
+    <PublicPage>
+      <PublicNav
+        actions={
+          <Link href="/login" className="rounded-lg px-3 py-2 text-[13px] font-medium text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-900">
+            Sign in
+          </Link>
+        }
+      />
+      <PublicWorkspace width="wide" className="grid min-h-[calc(100vh-5rem)] items-center py-12 md:py-16">
+        <div className="grid gap-10 lg:grid-cols-[0.86fr_1fr] lg:items-center">
+          <PublicHeader
+            label="Agency setup"
+            title="Create your agency workspace"
+            description="Start with a clean operations layer for client projects, deliverables, approvals, documents, and responsibilities."
+          />
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <span className="grid size-10 place-items-center rounded-md bg-muted">
-                  <Building2 className="size-5 text-muted-foreground" />
-                </span>
-                <div>
-                  <h2 className="font-semibold">Agency details</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Your email becomes the first owner account.</p>
-                </div>
+          <PublicPanel className="p-0">
+            <div className="flex items-center gap-3 border-b border-neutral-200 p-5">
+              <span className="grid size-10 place-items-center rounded-lg bg-neutral-100">
+                <Building2 className="size-5 text-neutral-500" />
+              </span>
+              <div>
+                <h2 className="text-[15px] font-semibold text-neutral-900">Agency details</h2>
+                <p className="mt-1 text-[13px] text-neutral-500">Your email becomes the first owner account.</p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            </div>
+            <div className="space-y-4 p-5">
               {status === "check-email" ? (
                 <FormMessage type="success">Check your inbox for a sign-in link to finish creating the agency.</FormMessage>
               ) : null}
@@ -69,71 +70,71 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
 
               <form action={startAgencyRegistration} className="space-y-4">
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium">Agency name</span>
+                  <span className="text-[13px] font-medium text-neutral-800">Agency name</span>
                   <input
                     required
                     name="agencyName"
                     placeholder="Paladar"
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-foreground/10"
+                    className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px] outline-none transition focus:border-neutral-300 focus:ring-2 focus:ring-neutral-900/10"
                   />
                 </label>
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium">Owner name</span>
+                  <span className="text-[13px] font-medium text-neutral-800">Owner name</span>
                   <input
                     name="ownerName"
                     placeholder="Your name"
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-foreground/10"
+                    className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px] outline-none transition focus:border-neutral-300 focus:ring-2 focus:ring-neutral-900/10"
                   />
                 </label>
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium">Owner email</span>
+                  <span className="text-[13px] font-medium text-neutral-800">Owner email</span>
                   <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
                     <input
                       required
                       name="ownerEmail"
                       type="email"
                       placeholder="owner@agency.com"
-                      className="h-10 w-full rounded-md border bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-foreground/10"
+                      className="h-10 w-full rounded-lg border border-neutral-200 bg-white pl-9 pr-3 text-[13px] outline-none transition focus:border-neutral-300 focus:ring-2 focus:ring-neutral-900/10"
                     />
                   </div>
                 </label>
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full rounded-lg text-[13px]">
                   Create agency
                 </Button>
                 {showDevLink ? (
-                  <Button formAction={createDevAgencyRegistrationLink} type="submit" variant="outline" className="w-full">
+                  <Button formAction={createDevAgencyRegistrationLink} type="submit" variant="outline" className="w-full rounded-lg text-[13px]">
                     Continue locally without email
                   </Button>
                 ) : null}
               </form>
               {showDevLink && (error === "over_email_send_rate_limit" || error === "429") ? (
-                <form action={createDevPendingRegistrationLink} className="space-y-3 border-t pt-4">
+                <form action={createDevPendingRegistrationLink} className="space-y-3 border-t border-neutral-200 pt-4">
                   <label className="block space-y-2">
-                    <span className="text-sm font-medium">Pending owner email</span>
+                    <span className="text-[13px] font-medium text-neutral-800">Pending owner email</span>
                     <input
                       required
                       name="ownerEmail"
                       type="email"
                       placeholder="owner@agency.com"
-                      className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-foreground/10"
+                      className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px] outline-none transition focus:border-neutral-300 focus:ring-2 focus:ring-neutral-900/10"
                     />
                   </label>
-                  <Button type="submit" variant="outline" className="w-full">
+                  <Button type="submit" variant="outline" className="w-full rounded-lg text-[13px]">
                     Continue pending registration
                   </Button>
                 </form>
               ) : null}
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-[13px] text-neutral-500">
                 Already have access?{" "}
-                <Link href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
+                <Link href="/login" className="font-medium text-neutral-900 underline-offset-4 hover:underline">
                   Sign in
                 </Link>
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </PublicPanel>
         </div>
-      </div>
-    </main>
+      </PublicWorkspace>
+    </PublicPage>
   );
 }

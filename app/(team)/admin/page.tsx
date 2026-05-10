@@ -1,5 +1,4 @@
-import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, SquarePen, UsersRound, Workflow } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { Reveal, TypingText } from "@/components/motion/reveal";
 import { AdminHomeRecentProjects } from "@/components/project/admin-home-recent-projects";
@@ -29,12 +28,13 @@ const welcomeFont = {
 const quickActions: Array<{
   label: string;
   href: string;
-  icon: LucideIcon;
+  imageSrc: string;
+  imageAlt: string;
 }> = [
-  { label: "New Project", href: "/admin/projects", icon: SquarePen },
-  { label: "New Pipeline", href: "/admin/templates", icon: Workflow },
-  { label: "View Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "View Clients", href: "/admin/clients", icon: UsersRound }
+  { label: "New Project", href: "/admin/projects", imageSrc: "/quick-actions/squarepen.png", imageAlt: "" },
+  { label: "New Pipeline", href: "/admin/templates", imageSrc: "/quick-actions/workflow.png", imageAlt: "" },
+  { label: "View Dashboard", href: "/admin", imageSrc: "/quick-actions/dotted-dashboard.png", imageAlt: "" },
+  { label: "View Clients", href: "/admin/clients", imageSrc: "/quick-actions/users-round.png", imageAlt: "" }
 ];
 
 function getFirstName(fullName?: string | null) {
@@ -48,12 +48,17 @@ function getFirstName(fullName?: string | null) {
 }
 
 function QuickActionCard({ action }: { action: (typeof quickActions)[number] }) {
-  const Icon = action.icon;
-
   return (
     <Link href={action.href} className="group flex min-w-0 flex-col items-center gap-3">
-      <span className="flex size-[118px] items-center justify-center rounded-[20px] border border-neutral-200/70 bg-neutral-100 text-neutral-900/85 transition duration-200 group-hover:-translate-y-0.5 group-hover:bg-neutral-200 group-hover:text-neutral-900">
-        <Icon className="size-5" strokeWidth={1.8} aria-hidden="true" />
+      <span className="flex size-[118px] items-center justify-center rounded-[20px] border border-neutral-200/70 bg-neutral-100 transition duration-200 group-hover:-translate-y-0.5 group-hover:bg-neutral-200">
+        <Image
+          src={action.imageSrc}
+          alt={action.imageAlt}
+          width={42}
+          height={42}
+          className="size-[42px] object-contain opacity-85 transition-opacity group-hover:opacity-95"
+          aria-hidden="true"
+        />
       </span>
       <span className="text-center text-[12px] font-medium leading-none text-neutral-800">{action.label}</span>
     </Link>

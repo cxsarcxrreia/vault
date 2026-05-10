@@ -1,45 +1,41 @@
 import { ArrowRight } from "lucide-react";
+import { PublicHeader, PublicPage, PublicPanel, PublicWorkspace } from "@/components/layout/public-shell";
 import { ButtonLink } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 export default function DevEntryPage() {
   return (
-    <main className="min-h-screen bg-background">
-      <section className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-6 py-16">
-        <div className="max-w-3xl">
-          <p className="text-sm font-medium text-muted-foreground">Internal test entry</p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-normal md:text-6xl">
-            MVP route shortcuts for local testing.
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
-            Use these links to jump into the team panel or client portal while developing the product shell.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/login">
+    <PublicPage>
+      <PublicWorkspace width="default" className="flex min-h-screen flex-col justify-center py-16">
+        <PublicHeader
+          label="Internal test entry"
+          title="MVP route shortcuts for local testing."
+          description="Use these links to jump into the team panel or client portal while developing the product shell."
+          actions={
+            <>
+              <ButtonLink href="/login" className="rounded-lg text-[13px]">
               Sign in
-              <ArrowRight className="ml-2 size-4" />
-            </ButtonLink>
-            <ButtonLink href="/admin" variant="outline">
-              Team panel
-            </ButtonLink>
-            <ButtonLink href="/portal" variant="outline">
-              Client portal
-            </ButtonLink>
-          </div>
-        </div>
-        <div className="mt-14 grid gap-4 md:grid-cols-3">
+                <ArrowRight className="ml-2 size-4" />
+              </ButtonLink>
+              <ButtonLink href="/admin" variant="outline" className="rounded-lg text-[13px]">
+                Team panel
+              </ButtonLink>
+              <ButtonLink href="/portal" variant="outline" className="rounded-lg text-[13px]">
+                Client portal
+              </ButtonLink>
+            </>
+          }
+        />
+        <div className="mt-14 grid gap-3 md:grid-cols-3">
           {["Macro timeline", "Deliverables center", "Documents and responsibilities"].map((item) => (
-            <Card key={item}>
-              <CardContent>
-                <h2 className="font-medium">{item}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  MVP foundation ready for Supabase-backed project operations.
-                </p>
-              </CardContent>
-            </Card>
+            <PublicPanel key={item} className="p-4">
+              <h2 className="text-[14px] font-semibold text-neutral-900">{item}</h2>
+              <p className="mt-2 text-[13px] leading-5 text-neutral-500">
+                MVP foundation ready for Supabase-backed project operations.
+              </p>
+            </PublicPanel>
           ))}
         </div>
-      </section>
-    </main>
+      </PublicWorkspace>
+    </PublicPage>
   );
 }
