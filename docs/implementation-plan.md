@@ -96,10 +96,10 @@ The app uses one Supabase project for many agencies. Agency-owned tables carry o
 - Public `/pricing` plan comparison and admin `/admin/billing` plan usage page.
 - Server-side draft project limit enforcement based on non-archived project count.
 - Paladar is treated as Premium with `subscription_status = manual`.
+- Public token-based proposal approval links at `/proposal/[token]` for pre-activation client approval.
 
 ## Later
 
-- Proposal token approval page.
 - Email provider integration for notification events.
 - Granular role management UI.
 - Stripe checkout, Stripe webhooks, and provider-backed subscription/paywall enforcement.

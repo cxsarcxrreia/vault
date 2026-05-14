@@ -602,7 +602,8 @@ export async function updateDealStatus(formData: FormData) {
       pre_activation_status: status,
       activation_state: activationState,
       status: projectStatus,
-      proposal_approved_at: status === "proposal_approved" ? new Date().toISOString() : null
+      proposal_approved_at: status === "proposal_approved" ? new Date().toISOString() : null,
+      proposal_approved_by_email: null
     })
     .eq("id", projectId);
 

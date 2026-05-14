@@ -100,6 +100,9 @@ export type Project = {
   archiveReason?: ArchiveReason | null;
   preActivationStatus?: DealStatus;
   activationState: ActivationState;
+  proposalToken?: string;
+  proposalApprovedAt?: string | null;
+  proposalApprovedByEmail?: string | null;
   currentPhase: string;
   templateName: string;
   startsOn: string | null;

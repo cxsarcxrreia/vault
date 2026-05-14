@@ -632,6 +632,7 @@ export type Database = {
           payment_confirmed_at: string | null
           pre_activation_status: Database["public"]["Enums"]["deal_status"]
           proposal_approved_at: string | null
+          proposal_approved_by_email: string | null
           proposal_token: string
           service_type: string | null
           starts_on: string | null
@@ -655,6 +656,7 @@ export type Database = {
           payment_confirmed_at?: string | null
           pre_activation_status?: Database["public"]["Enums"]["deal_status"]
           proposal_approved_at?: string | null
+          proposal_approved_by_email?: string | null
           proposal_token?: string
           service_type?: string | null
           starts_on?: string | null
@@ -678,6 +680,7 @@ export type Database = {
           payment_confirmed_at?: string | null
           pre_activation_status?: Database["public"]["Enums"]["deal_status"]
           proposal_approved_at?: string | null
+          proposal_approved_by_email?: string | null
           proposal_token?: string
           service_type?: string | null
           starts_on?: string | null
